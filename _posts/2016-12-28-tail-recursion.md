@@ -68,7 +68,7 @@ Some language’s compilers choose to optimize tail recursive functions because 
 ##### Python does not use tail recursive optimization
 In our example of tail recursion, we used Python because it made it easy to illustrate our example. But, it’s interesting to note that Python does not actually utilize tail recursive optimization, which means that it treats tail recursive calls just as it would treat normal recursive calls. This of course means that tail recursive calls in Python will be less efficient then they would be if they were optimized, but there are valid reasons the creator of Python decided not to add this feature.
 
-##### However Scala enable tail recursion optimization
+##### However Scala enables tail recursion optimization
 To use tail recursion optimization, you need tell compiler by:
 
 ```scala
@@ -81,7 +81,8 @@ else factorialAcc(n * acc, n - 1) }
       factorialAcc(1, n)
 }
 ```
-Note that you can use the @tailrec annotation in situations like this to confirm that your algorithm is tail recursive. If you use this annotation and your algorithm isn’t tail recursive, the compiler will complain. 
+Note that you can use the @tailrec annotation in situations like this to confirm that your algorithm is tail recursive. If you use this annotation and your algorithm isn’t tail recursive, the compiler will complain. More information:<a href="http://blog.richdougherty.com/2009/04/tail-calls-tailrec-and-trampolines.html"> tail recursion and trampolines </a>, <a href="http://stackoverflow.com/questions/1187433/scala-factorial-on-large-numbers-sometimes-crashes-and-sometimes-doesnt"> tail-call optimization in Scala </a>
+
 
 ##### Tail Recursion versus Iteration
 Tail recursion can be as efficient as iteration if the compiler uses what is known as tail recursion optimization. If that optimization is not used, then tail recursion is just as efficient as normal recursion.
