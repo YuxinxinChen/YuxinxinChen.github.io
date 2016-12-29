@@ -6,5 +6,5 @@ tags:
   - sample post
   - link post
 comments: true
-link: 'http://aweekj.github.io/Kiko-plus'
+link: 'http://yuxinxinchen.com'
 ---

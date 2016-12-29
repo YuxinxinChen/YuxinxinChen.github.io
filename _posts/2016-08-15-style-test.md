@@ -1,7 +1,6 @@
 ---
 layout: post
-title: "A Full and Comprehensive Style Test"
-description: "Test post for style"
+title: "Markdown Notes"
 date: 2016-08-15
 tags: [test, style]
 comments: true
@@ -57,6 +56,16 @@ Lorem ipsum dolor sit amet, [test link](#) adipiscing elit. **This is strong.** 
 * Item two
 * Item three
 
+## Cupidatat 90's lo-fi authentic try-hard
+
+In pug Portland incididunt mlkshk put a bird on it vinyl quinoa. Terry Richardson shabby chic +1, scenester Tonx excepteur tempor fugiat voluptate fingerstache aliquip nisi next level. Farm-to-table hashtag Truffaut, Odd Future ex meggings gentrify single-origin coffee try-hard 90's.
+
+* Sartorial hoodie
+* Labore viral forage
+* Tote bag selvage
+* DIY exercitation et id ugh tumblr church-key
+
+
 ### Definition Lists
 
 kramdown
@@ -77,6 +86,69 @@ Maruku
 |=====
 | Foot1   | Foot2   | Foot3
 
+Syntax highlighting is a feature that displays source code, in different colors and fonts according to the category of terms. This feature facilitates writing in a structured language such as a programming language or a markup language as both structures and syntax errors are visually distinct. Highlighting does not affect the meaning of the text itself; it is intended only for human readers.[^1]
+
+[^1]: <http://en.wikipedia.org/wiki/Syntax_highlighting>
+
+### Highlighted Code Blocks
+
+To modify styling and highlight colors edit `/_sass/_highlighter.scss`.
+
+```css
+#container {
+    float: left;
+    margin: 0 -240px 0 0;
+    width: 100%;
+}
+```
+
+```html
+{% raw %}<nav class="pagination" role="navigation">
+    {% if page.previous %}
+        <a href="{{ site.url }}{{ page.previous.url }}" class="btn" title="{{ page.previous.title }}">Previous article</a>
+    {% endif %}
+    {% if page.next %}
+        <a href="{{ site.url }}{{ page.next.url }}" class="btn" title="{{ page.next.title }}">Next article</a>
+    {% endif %}
+</nav><!-- /.pagination -->{% endraw %}
+```
+```ruby
+module Jekyll
+  class TagIndex < Page
+    def initialize(site, base, dir, tag)
+      @site = site
+      @base = base
+      @dir = dir
+      @name = 'index.html'
+      self.process(@name)
+      self.read_yaml(File.join(base, '_layouts'), 'tag_index.html')
+      self.data['tag'] = tag
+      tag_title_prefix = site.config['tag_title_prefix'] || 'Tagged: '
+      tag_title_suffix = site.config['tag_title_suffix'] || '&#8211;'
+      self.data['title'] = "#{tag_title_prefix}#{tag}"
+      self.data['description'] = "An archive of posts tagged #{tag}."
+    end
+  end
+end
+```
+
+
+### Standard Code Block
+
+    {% raw %}<nav class="pagination" role="navigation">
+        {% if page.previous %}
+            <a href="{{ site.url }}{{ page.previous.url }}" class="btn" title="{{ page.previous.title }}">Previous article</a>
+        {% endif %}
+        {% if page.next %}
+            <a href="{{ site.url }}{{ page.next.url }}" class="btn" title="{{ page.next.title }}">Next article</a>
+        {% endif %}
+    </nav><!-- /.pagination -->{% endraw %}
+
+### GitHub Gist Embed
+
+An example of a Gist embed below.
+
+<script src="https://gist.github.com/mmistakes/43a355923921d22cd993.js"></script>
 
 # Code Snippets
 
