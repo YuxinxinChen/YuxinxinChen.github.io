@@ -62,6 +62,7 @@ Compiling your match expression to a tableswitch or lookupswitch is better for p
 Here’s the official description from the <a href="http://www.scala-lang.org/api/current/index.html#scala.annotation.switch" >@switch annotation documentation</a>
 
 The effect of the **@switch** annotation is demonstrated with a simple example. First, place the following code in a file named **SwitchDemo.scala**:
+
 ```scala
   // Version 1 - compiles to a tableswitch
 import scala.annotation.switch class SwitchDemo {
@@ -72,21 +73,26 @@ case 1 => "One" case 2 => "Two" case _ => "Other"
 }
 ```
 Then compile the code as usual:
+
 ```
 $ scalac SwitchDemo.scala
 ```
-Compiling this class produces no warnings and creates the **SwitchDemo.class** output
-file. Next, disassemble that file with this **javap** command:
+
+Compiling this class produces no warnings and creates the **SwitchDemo.class** output file. Next, disassemble that file with this **javap** command:
+
 ```
 $ javap -c SwitchDemo
 ```
+
 The output from this command shows a tableswitch, like this:
+
 ```
  16:  tableswitch{ //1 to 2
                 1: 50;
                 2: 45;
                 default: 40 }
 ```
+
 This shows that Scala was able to optimize your match expression to a tableswitch. (This is a good thing.)
 
 
