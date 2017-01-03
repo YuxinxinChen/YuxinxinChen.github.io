@@ -95,5 +95,60 @@ The output from this command shows a tableswitch, like this:
 
 This shows that Scala was able to optimize your match expression to a tableswitch. (This is a good thing.)
 
+---
+### Scala Study on Jan 2
 
+```scala
+object rationals extends App{
+        val x = new Rational(1, 3)
+//      println(x.toString)
+        x.RationaltoString
+        val y = new Rational(5,7)
+        val z = new Rational(3,2)
+        (x-y-z).RationaltoString
+        (z+x*y).RationaltoString //don't get surprice by it can find the right sequence to execute. The precedence of an operator is determined by its first character. Scala has a table to define the order of priority precedence. But the use fo prefiex operation means to make clearer and easy read program, don't get sidetracked. 
+        (x+y+z).RationaltoString
+//      y.add(y).RationaltoString
+//      val a = new Rational(1,0)
+        val a = new Rational(2)
+        a.RationaltoString
+}
+
+
+class Rational(x: Int, y: Int)
+{
+        require(y!=0, "denominator is zero! What is wrong with you!") // require vs assert: require:illegalArgumentException, assert: AssertionError, require: used to enforce a precondition on the caller of the function, assert: to check the code of the function itself. 
+            
+        def this(x: Int) = this(x, 1)
+        private def gcd (x: Int, y: Int): Int = if (y == 0) x else gcd(y, x % y) // recursive method needs result type
+        val numer = x/gcd(x, y) // var or val: passing by value, def: passing by name. Also val numer=x/gcd(x,y) is better than def number=x/gcd(x,y) if numer or denom are frequently called, because val avoid repeating re-computation, and number, denom can be called directly
+        val denom = y/gcd(x, y)
+            
+        def RationaltoString: Unit = println(numer + "/" + denom) // use this because I didnt' install compile on runtime, to I still need to println. 
+//      override def toString  = numer + "/" + denom // succeed. 
+//      override with def toString: Unit = println (numer + "/" + denom) // unsucceed, because return value type is changed. But it is not a new function and a used nanme with the same signiture, compiler can't tell which function (the toString in string or the toString you define) to use. So you can't use this in this way
+//      def toString(f: (Int, Int) => Int) = println(numer/f(numer, denom) + "/" + denom/f(numer, denom)) // succeed
+            
+//      def add ( r: Rational) = // return value type can be inferred from context, so it is optional in this curcumstance 
+//              new Rational(numer*r.denom + denom*r.numer, denom*r.denom) 
+        def + ( r: Rational) = // return value type can be inferred from context, so it is optional in this curcumstance 
+                new Rational(numer*r.denom + denom*r.numer, denom*r.denom)  // infix operation! most characters are valied for identifiers, so use it! 
+                    
+//      def neg = new Rational(-numer, denom) //self reference: this.numer = numer, same for denom
+        def unary_- = new Rational(-numer, denom) // so to use -x and differetiate from x - y, use unary_- instead. Mark that there is a space after unary_- .
+
+//      def sub(r: Rational) = this.+ (r.neg)
+        def - (r: Rational) = this + -r
+
+        def * (r: Rational) = new Rational( numer*r.numer, denom*r.denom )
+}
+```
+* Marked Points:
+	* def x = 1 : passing by name; val x = 1 : passing by value. Optimization: How freqenct they are used and any potiential error requiring to use passing by name.
+	* Operator charactors and those weird charactors can be used as identifier, so use infix operation is possible. Also precedence of operators are predefined in Scala. 
+	* Require or assert function are predefined functions in scala. require: used to enforce a precondition on the caller of the function; assert: to check the code of the function itself. 
+	* Recursive method need result type.
+	* Read above toStrings to see override.
+	* Self reference
+	* Use of unary_ to define infix operator.
 
