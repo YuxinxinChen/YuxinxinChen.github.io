@@ -152,6 +152,7 @@ class Rational(x: Int, y: Int)
 	* Self reference
 	* Use of unary_ to define infix operator.
 
+
 ---
 ### Scala Notes on Jan 3
 
