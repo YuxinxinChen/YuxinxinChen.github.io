@@ -216,4 +216,17 @@ class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
 >     object Hello{
 >                def main(args: Array[String)] = println("Hello World")
 >        }
+* To place a class or object inside a package, use: package progfun.example at the top of your source code
+* To use a class or object inside a package, use import: import week3.Rational, import week3.{Rational, Hello}, import week3._
+* Standard Scala Library: <a href="http://www.scala-lang.org/api/current/" > http://www.scala-lang.org/api/current/ </a>
+* If a class wants to have several supertypes, use trait keyword: classes, objects and traits can only inherit from one class, but many traits. E.g. class Square extends Shape with Plannar with Movable. Traits
+resemble interfaces in Java, but are more powerful because they can contain fields and concrete methods. But traits cannot have parameters, only class can.
+* Nothing is at the bottom of Scala's type hierarchy. It is used to signal abnormal termination and as an element type of empty collections
+* Scala exception handling: throw Exc
+* Null type: every reference class type also has Null as a value. Null is a subcctype of every class that inherits from object; it is incompatible with subtype of AnyVal
+     * val x = null //ok
+     * val x: String = null //ok
+     * val x: Int = null //not ok
+
+![Class Hierarchy](https://github.com/YuxinxinChen/YuxinxinChen.github.io/tree/master/images/classhierarchy.png "Class Hierarchy")
 
