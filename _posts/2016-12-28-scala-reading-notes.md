@@ -152,3 +152,67 @@ class Rational(x: Int, y: Int)
 	* Self reference
 	* Use of unary_ to define infix operator.
 
+---
+### Scala Notes on Jan 3
+
+```scala
+object Exercise1 extends App{
+//      val n1 = new IntSet(3, new Empty, new Empty) //  class IntSet is abstract; cannot be instantiated
+        val n1 = new NonEmpty(3, Empty, Empty)
+        n1.toString_IntSet
+        val n2 = n1 incl 4
+        n2.toString_IntSet
+}
+
+abstract class IntSet {
+        def incl(x: Int): IntSet
+        def contains(x: Int): Boolean
+        def toString_IntSet
+        def union(other: IntSet): IntSet
+}
+
+/**
+class Empty extends IntSet{
+        def contains(x: Int) = false
+        def incl(x: Int): IntSet = new NonEmpty(x, new Empty, new Empty)
+        def toString_IntSet = println(".")
+        override def toString = "."
+}
+*/
+
+/** First optimization: we only need one single empty IntSet, so use: */
+object Empty extends IntSet{ 
+        def contains(x: Int) = false
+        def incl(x: Int): IntSet = new NonEmpty(x, Empty, Empty)
+        def toString_IntSet = println(".")
+        override def toString = "."
+        def union(other: IntSet) = other
+}
+/** This defines a singleton object called Empty, no other Emyty instances can be created, singleton object are values, so Empty evaluate itself*/
+class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
+        def contains(x: Int): Boolean = {
+                if (x>elem) right contains x
+                else if (x<elem) left contains x
+                else true }
+
+        def incl(x: Int): IntSet = {
+                if (x>elem) new NonEmpty(elem, left, right incl x)
+                else if (x<elem) new NonEmpty(elem, left incl x, right)
+                else this }
+
+        def toString_IntSet = println("{" + left + elem + right + "}")
+        override def toString = "{"+ left + elem + right + "}"
+        def union(other: IntSet): IntSet = ((left union right) union other) incl elem
+}
+```
+
+* dynamic method dispatch model in object-oriented languages: dynamic binding is analogous to higher-order functions in functional languages.
+* abstract class
+* extends: an object of type Empty and NonEmpty can be used wherever an object of type IntSet is required
+* override
+* singleton object
+* In standalone application in Scala, each application contains an object with a main metho, e.g.
+>     object Hello{
+>                def main(args: Array[String)] = println("Hello World")
+>        }
+
