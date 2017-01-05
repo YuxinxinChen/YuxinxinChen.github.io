@@ -235,10 +235,12 @@ class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
 ### Scala Study on Jan 4 and my Lyft coupon expired
 
 * You cann't do:
+
 ```scala
  def foo(f: Int=>Int)(var a: Double). 
 ```
 Mutating the input parameters is often seen as bad style and makes it harder to reason about code. The reason could be simple: alias problem. so: 
+
 ```scala
 def foo(f: Int=>Int)(val a: Double)
 ```
