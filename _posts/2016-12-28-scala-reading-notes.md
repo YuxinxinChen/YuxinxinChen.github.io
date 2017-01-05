@@ -213,14 +213,15 @@ class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
 * override
 * singleton object
 * In standalone application in Scala, each application contains an object with a main metho, e.g.
->     object Hello{
->                def main(args: Array[String)] = println("Hello World")
->        }
-* To place a class or object inside a package, use: package progfun.example at the top of your source code
-* To use a class or object inside a package, use import: import week3.Rational, import week3.{Rational, Hello}, import week3._
+```scala
+     object Hello{
+                def main(args: Array[String)] = println("Hello World")
+        }
+```
+* To place a class or object inside a package, use: **package progfun.example** at the top of your source code
+* To use a class or object inside a package, use import: **import week3.Rational, import week3.{Rational, Hello}, import week3._**
 * Standard Scala Library: <a href="http://www.scala-lang.org/api/current/" > http://www.scala-lang.org/api/current/ </a>
-* If a class wants to have several supertypes, use trait keyword: classes, objects and traits can only inherit from one class, but many traits. E.g. class Square extends Shape with Plannar with Movable. Traits
-resemble interfaces in Java, but are more powerful because they can contain fields and concrete methods. But traits cannot have parameters, only class can.
+* If a class wants to have several supertypes, use trait keyword: classes, objects and traits can only inherit from one class, but many traits. E.g. **class Square extends Shape with Plannar with Movable**. Traits resemble interfaces in Java, but are more powerful because they can contain fields and concrete methods. But traits cannot have parameters, only class can.
 * Nothing is at the bottom of Scala's type hierarchy. It is used to signal abnormal termination and as an element type of empty collections
 * Scala exception handling: throw Exc
 * Null type: every reference class type also has Null as a value. Null is a subcctype of every class that inherits from object; it is incompatible with subtype of AnyVal
@@ -230,3 +231,51 @@ resemble interfaces in Java, but are more powerful because they can contain fiel
 
 ![Class Hierarchy](https://github.com/YuxinxinChen/YuxinxinChen.github.io/tree/master/images/classhierarchy.png "Class Hierarchy")
 
+---
+### Scala Study on Jan 4 and my Lyft coupon expired
+
+* You cann't do:
+```scala
+ def foo(f: Int=>Int)(var a: Double). 
+```
+Mutating the input parameters is often seen as bad style and makes it harder to reason about code. The reason could be simple: alias problem. so: 
+```scala
+def foo(f: Int=>Int)(val a: Double)
+```
+* Type parameters do not effect evaluation in Scala, this is called type erasure
+
+```scala
+package lesson4
+
+trait List[T] { // make it scalable and apply to kinds of types lists. Use type parameter: [T]. Not only class, functions also can have type parameters: def singleton[T](elem: T) = new Cons[T](elem, new Nil[T])
+        def isEmpty: Boolean
+        def head: T
+        def tail: List[T]
+}
+
+class Cons[T](val head: T, val tail: List[T]) extends List[T]{
+        def isEmpty = false
+        // head and tail is defined in cons parameters
+}
+
+class Nil[T] extends List[T]{
+        def isEmpty = true
+        def head = throw new NoSuchElementException("Nil.head")
+        def tail = throw new NoSuchElementException("Nil.tail")
+}
+``` 
+In other file:
+
+```scala
+import lesson4._
+
+object nth extends App{
+        def nth[T]( n: Int, xs: List[T]) :T = {
+                if (xs.isEmpty) throw new IndexOutOfBoundsException
+                else if (n==0) xs.head
+                else nth(n-1, xs.tail)
+        }
+        val list1 = new Cons(1, new Cons(2, new Cons(3, new Nil)))
+        println(nth(2, list1))
+}
+```
