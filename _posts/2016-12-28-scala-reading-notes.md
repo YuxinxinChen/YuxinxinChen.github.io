@@ -213,6 +213,7 @@ class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
 * override
 * singleton object
 * In standalone application in Scala, each application contains an object with a main metho, e.g.
+
 ```scala
      object Hello{
                 def main(args: Array[String)] = println("Hello World")
