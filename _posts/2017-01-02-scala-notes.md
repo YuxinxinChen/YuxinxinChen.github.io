@@ -82,6 +82,19 @@ Alt-H1
 Alt-H2
 ------
 
+Three or more...
+
+---
+
+Hyphens
+
+***
+
+Asterisks
+
+___
+
+Underscores
 
 
 ### Scala Notes on Jan 3
