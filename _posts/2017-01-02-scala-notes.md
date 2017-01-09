@@ -63,7 +63,7 @@ class Rational(x: Int, y: Int)
 	* Use of unary_ to define infix operator.
 
 
----
+------
 ### Scala Notes on Jan 3
 
 ```scala
