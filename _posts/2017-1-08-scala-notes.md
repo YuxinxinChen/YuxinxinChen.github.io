@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Scala on Jan 8'
+title: "Scala on Jan 8"
 data: 2017-1-08
 tags: [reading notes, scala]
 comments: true
