@@ -94,9 +94,6 @@ Asterisks
 
 ___
 
-Underscores
-
-
 ### Scala Notes on Jan 3
 
 ```scala
