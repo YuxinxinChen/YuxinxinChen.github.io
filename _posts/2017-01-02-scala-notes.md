@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Scala Reading Notes on Jan 2"
+title: "Scala Reading Notes on Jan 2-4"
 data: 2017-01-02
 tags: [reading notes, scala]
 comments: true
@@ -143,6 +143,7 @@ class NonEmpty(elem: Int, left: IntSet, right: IntSet) extends IntSet{
 ![Class Hierarchy](https://github.com/YuxinxinChen/YuxinxinChen.github.io/tree/master/images/classhierarchy.png "Class Hierarchy")
 
 ---
+
 ### Scala Study on Jan 4 and my Lyft coupon expired
 
 * You cann't do:
@@ -192,8 +193,4 @@ object nth extends App{
         println(nth(2, list1))
 }
 ```
----
-### Scala Study on Jan 8 and decide to study some relative high level stuff? 
 
-* <a href="https://blog.codecentric.de/en/2015/03/scala-type-system-parameterized-types-variances-part-1/" > Scala type system: parameterized type and variance </a>
-* <a href="https://blog.codecentric.de/en/2015/04/the-scala-type-system-parameterized-types-and-variances-part-2/" > Subtype polymorphism and allowed variance annotations </a>
