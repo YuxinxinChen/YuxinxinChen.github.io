@@ -282,3 +282,8 @@ object nth extends App{
         println(nth(2, list1))
 }
 ```
+---
+### Scala Study on Jan 8 and decide to study some relative high level stuff? 
+
+* <a href="Scala type system: parameterized type and variance"> https://blog.codecentric.de/en/2015/03/scala-type-system-parameterized-types-variances-part-1/ </a>
+* <a herf = "Subtype Polymorphism and Allowed Variance Annotations"> https://blog.codecentric.de/en/2015/04/the-scala-type-system-parameterized-types-and-variances-part-2/ </a>
