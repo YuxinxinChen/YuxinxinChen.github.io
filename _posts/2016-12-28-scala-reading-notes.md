@@ -285,5 +285,5 @@ object nth extends App{
 ---
 ### Scala Study on Jan 8 and decide to study some relative high level stuff? 
 
-* <a href="https://blog.codecentric.de/en/2015/03/scala-type-system-parameterized-types-variances-part-1/"> Scala type system: parameterized type and variance </a>
-* <a herf = "https://blog.codecentric.de/en/2015/04/the-scala-type-system-parameterized-types-and-variances-part-2/">  Subtype Polymorphism and Allowed Variance Annotations </a>
+* <a href="https://blog.codecentric.de/en/2015/03/scala-type-system-parameterized-types-variances-part-1/" > Scala type system: parameterized type and variance </a>
+* <a href="https://blog.codecentric.de/en/2015/04/the-scala-type-system-parameterized-types-and-variances-part-2/" > Subtype polymorphism and allowed variance annotations </a>
