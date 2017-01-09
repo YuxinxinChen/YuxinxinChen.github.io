@@ -1,4 +1,4 @@
-----
+---
 layout: post
 title: "Scala on Jan 8'
 data: 2017-1-08
