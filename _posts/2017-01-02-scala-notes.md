@@ -63,7 +63,6 @@ class Rational(x: Int, y: Int)
 	* Use of unary_ to define infix operator.
 
 
-------
 # H1
 ## H2
 ### H3
