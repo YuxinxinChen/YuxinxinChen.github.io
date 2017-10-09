@@ -1,5 +1,13 @@
 ---
 layout: post
+title: "Scala Reading Notes on Jan 2-4"
+data: 2017-01-02
+tags: [reading notes, scala]
+comments: true
+share: false
+---
+---
+layout: post
 title: "Mini Gunrock Reading Notes"
 data: 2017-10-10
 tages:[reading notes, GPU]
