@@ -193,5 +193,5 @@ bool _random_edge_value = false) {-----}
 } //end gunrock
 ```
 Inline_sytle:
-![alt text](https://github.com/YuxinxinChen/YuxinxinChen.github.io/tree/master/images/soal_painter_csr.jpg "CSR")
+![alt text](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/soal_painter_csr.jpg)
 
