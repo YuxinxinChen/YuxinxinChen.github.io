@@ -20,9 +20,7 @@ struct problem_t {
       {}
 
   // Disable copy ctor and assignment operator. We don't want to let the
-  // user copy only a slice.
-  problem_t(const problem_t& rhs) = delete;
-  problem_t& operator=(const problem_t& rhs) = delete;
+  // user copy only a slice. (code hided by deleting...)
 
   problem_t(std::shared_ptr<graph_device_t> rhs) {
       gslice = rhs;
@@ -41,3 +39,159 @@ struct problem_t {
 
 }
 ```
+problem_t is a general class which each primitive problem will inherit from, like BFS(Breadth-first-search) problem:
+```c
+namespace gunrock {
+namespace bfs {
+
+struct bfs_problem_t : problem_t {
+  mem_t<int> d_labels;
+  mem_t<int> d_preds;
+  std::vector<int> labels;
+  std::vector<int> preds;
+  int src;
+
+  struct data_slice_t {
+      int *d_labels;
+      int *d_preds;
+
+      void init(mem_t<int> &_labels, mem_t<int> &_preds) {
+        d_labels = _labels.data();
+        d_preds = _preds.data();
+      }
+  };
+
+  mem_t<data_slice_t> d_data_slice;
+  std::vector<data_slice_t> data_slice;
+  
+  bfs_problem_t() {}
+
+  bfs_problem_t(std::shared_ptr<graph_device_t> rhs, size_t src, standard_context_t& context) :
+      problem_t(rhs),
+      src(src),
+      data_slice( std::vector<data_slice_t>(1) ) {
+          labels = std::vector<int>(rhs->num_nodes, -1);
+          preds = std::vector<int>(rhs->num_nodes, -1);
+          labels[src] = 0;
+          preds[src] = -1;
+          d_labels = to_mem(labels, context);
+          d_preds = to_mem(preds, context);
+          data_slice[0].init(d_labels, d_preds);
+          d_data_slice = to_mem(data_slice, context);
+      }
+};
+
+} //end bfs
+} // end gunrock
+```
+Based on general type problem_t, BFS defines its required data structure in data_slice_t which including label information and preds information (who is the parent). The label and pred are set to -1 except source node(src: 0, -1 rpt). mem_T<> is a class defined by moderngpu which basically wrap a device pointer, its size, mem space and context. to_mem is copy command from host to device.
+
+```c
+namespace gunrock {
+
+enum frontier_type_t {
+  edge_frontier = 0,
+  node_frontier = 1
+};
+
+template<typename type_t>
+class frontier_t {
+  size_t _size;
+  size_t _capacity;
+  frontier_type_t _type;
+
+  std::shared_ptr<mem_t<type_t> > _data;
+
+public:
+  void swap(frontier_t& rhs) {---}
+
+  frontier_t() : _size(0), _capacity(1), _type(node_frontier), _data(std::make_shared<type_t>()){ }
+
+  frontier_t(context_t &context, size_t capacity, size_t size = 0, frontier_type_t type = node_frontier) :
+      _capacity(capacity),
+      _size(size),
+      _type(type)
+    {
+        _data.reset(new mem_t<type_t>(capacity, context));
+    }
+
+  frontier_t(frontier_t&& rhs) : frontier_t() {
+    swap(rhs);
+  }
+
+  frontier_t& operator=(frontier_t&& rhs) {
+    swap(rhs);
+    return *this;
+  }
+
+  cudaError_t load(mem_t<type_t> &target) {----}
+
+  cudaError_t load(std::vector<type_t> target) {----}
+
+  void resize(size_t size) {----}
+
+  size_t capacity() const { return _capacity; }
+  size_t size() const { return _size; }
+  frontier_type_t type() const {return _type; }
+  std::shared_ptr<mem_t<type_t> > data() const {return _data; }
+  
+};
+
+} //end gunrock
+```
+All operators are applied on frontier_t. Before getting into the operators, have a look at graph data structure:
+```c
+namespace gunrock {
+
+struct csr_t {
+  int num_nodes;
+  int num_edges;
+  std::vector<int> offsets;
+  std::vector<int> indices;
+  std::vector<float> edge_weights;
+  std::vector<int> sources;
+};
+
+struct graph_t {
+  bool undirected;
+  int num_nodes;
+  int num_edges;
+
+  std::shared_ptr<csr_t> csr;
+  std::shared_ptr<csr_t> csc;
+};
+
+struct graph_device_t {
+  int num_nodes;
+  int num_edges;
+  mem_t<int> d_row_offsets;
+  mem_t<int> d_col_indices;
+  mem_t<float> d_col_values;
+  mem_t<int> d_col_offsets;
+  mem_t<int> d_row_indices;
+  mem_t<float> d_row_values;
+  mem_t<int> d_csr_srcs;
+  mem_t<int> d_csc_srcs;
+  
+  // update during each advance iteration
+  // to store the scaned row offsets of
+  // the current frontier
+  mem_t<int> d_scanned_row_offsets;
+
+  graph_device_t() :
+      num_nodes(0),
+      num_edges(0)
+      {}
+};
+
+void graph_to_device(std::shared_ptr<graph_device_t> d_graph, std::shared_ptr<graph_t> graph,
+standard_context_t &context) { -----}
+
+std::shared_ptr<graph_t> load_graph(const char *_name, bool _undir = false,
+bool _random_edge_value = false) {-----}
+
+} //end gunrock
+```
+Inline_sytle:
+![alt text](https://github.com/YuxinxinChen/YuxinxinChen.github.io/tree/master/images/soal_painter_csr.jpg "CSR")
+
