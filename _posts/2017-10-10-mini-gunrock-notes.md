@@ -231,7 +231,10 @@ int advance_forward_kernel(std::shared_ptr<Problem> problem,
     transform_scan<int>(segment_sizes, (int)input.get()->size(), scanned_row_offsets, plus_t<int>(), 
             count.data(), context);                                                  
 
-    //transform_scan is a function in mgpu: first argument is a lambda function operated on each element of an input array (input array is given by lambda function), the second argument is the size of the input array, third is the output place, forth is reduction operator. fifth stores the reduction of all result from segment_sizes. So you get scan of the neighbor list length of each node in input frontier according to nodeId
+    //transform_scan is a function in mgpu: first argument is a lambda function operated on each element 
+    //of an input array (input array is given by lambda function), the second argument is the size of 
+    //the input array, third is the output place, forth is reduction operator. fifth stores the reduction 
+    //of all result from segment_sizes. So you get scan of the neighbor list length of each node in input frontier according to nodeId
 
     int front = from_mem(count)[0];
     if(!front) {
@@ -293,5 +296,184 @@ static __device__ __forceinline__ bool apply_advance(int src, int dst, int edge_
 }
 ```
 Then advance operator does is: giving the nodeId, finding the neighbors, writting to a cond as a bitmap if that neighbor has been visited (data->d_labels[dst] == -1) then writting to the output_data -1 if visited or setting label with iteration+1 fails or nodeId of the neighbor if not visited and setting label successfully. 
+
+### filter
+
+```c
+namespace gunrock {
+namespace oprtr {
+namespace filter {
+
+// filter kernel using transform_compact with full uniquification
+// (remove all the failed condition items)
+//
+template<typename Problem, typename Functor>
+int filter_kernel(std::shared_ptr<Problem> problem,
+              std::shared_ptr<frontier_t<int> > &input,
+              std::shared_ptr<frontier_t<int> > &output,
+              int iteration,
+              standard_context_t &context)
+{
+    auto compact = transform_compact(input.get()->size(), context);
+    int *input_data = input.get()->data()->data();
+    typename Problem::data_slice_t *data = problem.get()->d_data_slice.data();
+    int stream_count = compact.upsweep([=]__device__(int idx) {
+                int item = input_data[idx];
+                return Functor::cond_filter(item, data, iteration);
+            });
+    output->resize(stream_count);
+    int *output_data = output.get()->data()->data();
+    compact.downsweep([=]__device__(int dest_idx, int source_idx) {
+            output_data[dest_idx] = input_data[source_idx];
+        });
+    return stream_count;
+}
+} //end filter
+} //end oprtr
+} //end gunrock
+```
+transform_compact is from mgpu:
+```c
+template<typename launch_arg_t = empty_t>
+stream_compact_t<launch_arg_t> 
+transform_compact(int count, context_t& context);
+
+template<typename launch_arg_t>
+struct stream_compact_t {
+  ...
+public:
+  // upsweep of stream compaction. 
+  // func_t implements bool operator(int index);
+  // The return value is flag for indicating that we want to *keep* the data
+  // in the compacted stream.
+  template<typename func_t>
+  int upsweep(func_t f);
+
+  // downsweep of stream compaction.
+  // func_t implements void operator(int dest_index, int source_index).
+  // The user can stream from data[source_index] to compacted[dest_index].
+  template<typename func_t>
+  void downsweep(func_t f);
+};
+```
+transform_compact is a two-pass pattern for space-efficient stream compaction. The user constructs a stream_compact_t object by calling transform_compact. On the upsweep, the user provides a lambda function which returns true to retain the specified index in the streamed output. On the downsweep, the user implements a void-returning lambda which takes the index to stream to and the index to stream from. The user may implement any element-wise copy or transformation in the body of this lambda. Same as scala filter.
+
+Then in the filter code, it first constract a transform_compact object, then do upsweep and downsweep. Take BFS as an example. Here is the code in the bfs_functor:
+```c
+static __device__ __forceinline__ bool cond_filter(int idx, bfs_problem_t::data_slice_t *data, int iteration) {
+    return idx != -1;
+}
+```
+We know from advance, we have a frontier whose data is either nodeId or -1. Now we want to filter out the -1, in the upsweep, we get the data and see if it equals to -1 and in the downsweep, it filters out those -1 and reconstruct the frontier in the output frontier.
+
+Then for BFS problem, it is clear how to map it to mini gunrock: we start from the source node as the first frontier, expand to find all the neighers of the frontier (reconstruct frontier) and filter the neigher who are visited (reconstruct frontier). Then we do this again and again. This relate to the last part: putting things together
+
+### enactor
+
+```c
+namespace gunrock {
+
+struct enactor_t {
+    std::vector< std::shared_ptr<frontier_t<int> > > buffers;
+    std::shared_ptr<frontier_t<int> > indices;
+    std::shared_ptr<frontier_t<int> > filtered_indices;
+    std::vector< std::shared_ptr<frontier_t<int> > > unvisited;
+
+    enactor_t(standard_context_t &context, int num_nodes, int num_edges, float queue_sizing=1.0f) {
+        init(context, num_nodes, num_edges, queue_sizing);
+      }
+
+    void init(standard_context_t &context, int num_nodes, int num_edges, float queue_sizing) {
+        std::shared_ptr<frontier_t<int> > input_frontier(std::make_shared<frontier_t<int> >(context, (int)(num_edges*queue_sizing)));
+        std::shared_ptr<frontier_t<int> > output_frontier(std::make_shared<frontier_t<int> >(context, (int)(num_edges*queue_sizing)));
+        buffers.push_back(input_frontier);
+        buffers.push_back(output_frontier);
+
+        indices = std::make_shared<frontier_t<int> >(context, num_nodes);
+        filtered_indices = std::make_shared<frontier_t<int> >(context, num_nodes);
+        auto gen_idx = [=]__device__(int index) {
+            return index;
+        };
+        mem_t<int> indices_array = mgpu::fill_function<int>(gen_idx, num_nodes, context);
+        indices->load(indices_array);
+        filtered_indices->load(indices_array);
+
+        unvisited.push_back(indices);
+        unvisited.push_back(filtered_indices);
+
+}
+} // end enactor_t
+} // end gunrock
+```
+A buffers contains two frontier: input frontier and output frontier. The indices, filtered_indices and unvisited are used for pull style advance. See the 3.5 part of paper: [mini-gunrock](http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7965101)
+
+Let's look BFS enactor (only the push-style advance):
+```c
+namespace gunrock {
+namespace bfs {
+
+struct bfs_enactor_t : enactor_t {
+
+    //Constructor
+    bfs_enactor_t(standard_context_t &context, int num_nodes, int num_edges) :
+        enactor_t(context, num_nodes, num_edges)
+    {
+    }
+
+    void init_frontier(std::shared_ptr<bfs_problem_t> bfs_problem) {
+        int src = bfs_problem->src; // get the source nodeId
+        std::vector<int> node_idx(1, src); // construct it into an array then used as argument
+        buffers[0]->load(node_idx); // load source node to device
+    }
+    
+    //Enact
+    void enact_pushpull(std::shared_ptr<bfs_problem_t> bfs_problem, float threshold, standard_context_t &context) {
+        init_frontier(bfs_problem);
+
+        int frontier_length = 1;
+        int selector = 0;
+        int num_nodes = bfs_problem.get()->gslice->num_nodes;
+        int iteration;
+
+        for (iteration = 0; ; ++iteration) {
+            frontier_length = advance_forward_kernel<bfs_problem_t, bfs_functor_t, false, true>
+                (bfs_problem,
+                 buffers[selector],
+                 buffers[selector^1],
+                 iteration,
+                 context);
+            selector ^= 1;
+            if (!frontier_length) break;
+            frontier_length = filter_kernel<bfs_problem_t, bfs_functor_t>
+                (bfs_problem,
+                 buffers[selector],
+                 buffers[selector^1],
+                 iteration,
+                 context);
+
+            if (!frontier_length) break;
+            selector ^= 1;
+        }
+        std::cout << "pushed iterations: " << iteration << std::endl;
+   }
+
+};
+} //end bfs
+} //end gunrock
+```
+BFS is finished by loading the source node into the frontier, advance on that frontier and filter that frontier. Doing this iteration untill all the nodes are visited and frontier length becomes 0. The switching between input frontier and outpu frontier is achieved by: selector ^=1
+```bash
+0 ^ 1 = 1
+1 ^ 1 = 0
+2 ^ 1 = 3
+3 ^ 1 = 2
+4 ^ 1 = 5
+5 ^ 1 = 4
+6 ^ 1 = 7
+7 ^ 1 = 6
+8 ^ 1 = 9
+9 ^ 1 = 8
+```
+Hope you see my point.
 
 
