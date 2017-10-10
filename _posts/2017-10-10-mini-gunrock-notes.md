@@ -197,9 +197,10 @@ I am a soul painter:
 By the way, the length of value array is number of edges in the graph, the value can be the edge weights. In this graph, I only 1,0 to show if there is a edge between. Note this is undirected graph, then only save the upper part of matrix since the matrix is symetric. Then length of col_indices array is number of edges in the graph. The length of row_offset is number of nodes + 1 with the last element saves the total number of edges in the graph. Csr is row based compression format and csc is col based compression format. A discussion favors a column based format since it is more mem-efficent for GPU. Anyway, the picture is a good illustration I believe otherwise google it. 
 
 d_scanned_row_offsets is an array for frontier, so if this iteration the input queue is node 0, node 3, and node 6, the input forntier will be 0 3 6, and suppose the original row_offsets is 0, 2, 10, 100, 150, 180, 900, 1000...., the neighbor list length of node 0, node 3 and node 6 will be, 2, 50, and 100. So the scanned_row_offsets will be 0, 2, 52, the output frontier length should be 152.
+---
 
-##Operators
-###Advance
+## Operators
+### Advance
 
 ```c
 namespace gunrock {
