@@ -84,7 +84,7 @@ struct bfs_problem_t : problem_t {
 } //end bfs
 } // end gunrock
 ```
-Based on general type problem_t, BFS defines its required data structure in data_slice_t which including label information and preds information (who is the parent). The label and pred are set to -1 except source node(src: 0, -1 rpt). mem_T<> is a class defined by moderngpu which basically wrap a device pointer, its size, mem space and context. to_mem is copy command from host to device.
+Based on general type problem_t, BFS defines its required data structure in data_slice_t which including label information (if visited) and preds information (who is the parent). The label and pred are set to -1 except source node(src: 0, -1 rpt). mem_T<> is a class defined by moderngpu which basically wrap a device pointer, its size, mem space and context. to_mem is copy command from host to device.
 
 ```c
 namespace gunrock {
@@ -185,13 +185,113 @@ struct graph_device_t {
 };
 
 void graph_to_device(std::shared_ptr<graph_device_t> d_graph, std::shared_ptr<graph_t> graph,
-standard_context_t &context) { -----}
+standard_context_t &context) { -----} // copy graph data to device
 
 std::shared_ptr<graph_t> load_graph(const char *_name, bool _undir = false,
 bool _random_edge_value = false) {-----}
 
 } //end gunrock
 ```
-Inline_sytle:
+I am a soul painter:
 ![alt text](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/soal_painter_csr.jpg)
+By the way, the length of value array is number of edges in the graph, the value can be the edge weights. In this graph, I only 1,0 to show if there is a edge between. Note this is undirected graph, then only save the upper part of matrix since the matrix is symetric. Then length of col_indices array is number of edges in the graph. The length of row_offset is number of nodes + 1 with the last element saves the total number of edges in the graph. Csr is row based compression format and csc is col based compression format. A discussion favors a column based format since it is more mem-efficent for GPU. Anyway, the picture is a good illustration I believe otherwise google it. 
+
+d_scanned_row_offsets is an array for frontier, so if this iteration the input queue is node 0, node 3, and node 6, the input forntier will be 0 3 6, and suppose the original row_offsets is 0, 2, 10, 100, 150, 180, 900, 1000...., the neighbor list length of node 0, node 3 and node 6 will be, 2, 50, and 100. So the scanned_row_offsets will be 0, 2, 52, the output frontier length should be 152.
+
+##Operators
+###Advance
+
+```c
+namespace gunrock {
+namespace oprtr {
+namespace advance {
+
+    //first scan
+    //then lbs (given the option to idempotence or not)
+template<typename Problem, typename Functor, bool idempotence, bool has_output>
+int advance_forward_kernel(std::shared_ptr<Problem> problem,
+              std::shared_ptr<frontier_t<int> > &input,
+              std::shared_ptr<frontier_t<int> > &output,
+              int iteration,
+              standard_context_t &context)
+{
+    int *input_data = input.get()->data()->data(); //first data() for frontier, second data() for mem_t
+    int *scanned_row_offsets = problem.get()->gslice->d_scanned_row_offsets.data();
+    int *row_offsets = problem.get()->gslice->d_row_offsets.data();
+    mem_t<int> count(1, context);
+
+    auto segment_sizes = [=]__device__(int idx) { // this lambda function compute the neighbor list length of each node in input frontier
+        int count = 0;
+        int v = input_data[idx];
+        int begin = row_offsets[v];
+        int end = row_offsets[v+1];
+        count = end - begin;
+        return count;
+    };
+    transform_scan<int>(segment_sizes, (int)input.get()->size(), scanned_row_offsets, plus_t<int>(), 
+            count.data(), context);                                                  
+
+    //transform_scan is a function in mgpu: first argument is a lambda function operated on each element of an input array (input array is given by lambda function), the second argument is the size of the input array, third is the output place, forth is reduction operator. fifth stores the reduction of all result from segment_sizes. So you get scan of the neighbor list length of each node in input frontier according to nodeId
+
+    int front = from_mem(count)[0];
+    if(!front) {
+        if (has_output) output->resize(front);
+        return 0;
+    }
+
+    int *col_indices = problem.get()->gslice->d_col_indices.data();
+    if (has_output) output->resize(front);
+    int *output_data = has_output? output.get()->data()->data() : nullptr;
+    typename Problem::data_slice_t *data = problem.get()->d_data_slice.data(); //data_slice stores the data related to the primitive, 
+    auto neighbors_expand = [=]__device__(int idx, int seg, int rank) {
+        int v = input_data[seg];
+        int start_idx = row_offsets[v];
+        int neighbor = col_indices[start_idx+rank];
+        bool cond = Functor::cond_advance(v, neighbor, start_idx+rank, rank, idx, data, iteration); 
+        if (has_output)
+            output_data[idx] = idempotence ? neighbor : ((cond && Functor::apply_advance(v, neighbor, start_idx+rank, rank, idx, data, iteration)) ? neighbor : -1);
+    };
+    transform_lbs(neighbors_expand, front, scanned_row_offsets, (int)input.get()->size(), context);
+
+    if(!has_output) front = 0;
+
+    return front;
+}
+} //end advance
+} //end oprtr
+} //end gunrock
+```
+There are two frontier_t: input, output, working like a rendering buffer: input->output->input->output....
+transform_lbs:
+```c
+template<
+  typename launch_arg_t = empty_t, // provides (nt, vt, vt0)
+  typename func_t,         // load-balancing search callback implements
+                           //   void operator()(int index,   // work-item
+                           //                   int seg,     // segment ID
+                           //                   int rank,    // rank within seg
+                           //                   tuple<...> cached_values).
+  typename segments_it,    // segments-descriptor array.
+  typename tpl_t           // tuple<> of iterators for caching loads.
+>
+void transform_lbs(func_t f, int count, segments_it segments, 
+  int num_segments, tpl_t caching_iterators, context_t& context);
+```
+transform_lbs apply f on each element of an array, but it uses the new front-end to the load-balancing search pattern which is robust with respect to the shape of the problem. The caller describes a collection of irregularly-sized segments with an array that indexes into the start of each segment. (This is identical to the prefix sum of the segment sizes.) Load-balancing search restores shape to this flattened array by calling your lambda once for each element in each segment and passing the segment identifier and the rank of the element within that segment.
+So the scanned_row_offsets we compute before is used for transform_lbs to do load balancing...
+
+Then in the advance operator, neighbors_expand uses Functor::cond_advance and apply_advance to define the actually compute(the lambda function). Take BFS as an example:
+In bfs_functor:
+```c
+static __device__ __forceinline__ bool cond_advance(int src, int dst, int edge_id, int rank, int output_idx, bfs_problem_t::data_slice_t *data, int iteration) {
+    return (data->d_labels[dst] == -1);
+}
+
+static __device__ __forceinline__ bool apply_advance(int src, int dst, int edge_id, int rank, int output_idx, bfs_problem_t::data_slice_t *data, int iteration) {
+
+    return (atomicCAS(&data->d_labels[dst], -1, iteration + 1) == -1);
+}
+```
+Then advance operator does is: giving the nodeId, finding the neighbors, writting to a cond as a bitmap if that neighbor has been visited (data->d_labels[dst] == -1) then writting to the output_data -1 if visited or setting label with iteration+1 fails or nodeId of the neighbor if not visited and setting label successfully. 
+
 
