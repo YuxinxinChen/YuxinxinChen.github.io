@@ -1,3 +1,13 @@
+---
+layout: post
+title: "Spark Reference"
+data: 2017-1-13
+tags: [reading notes, spark]
+comments: true
+share: false
+---
+
+```scala
 val lines = sc.textFile("/path/to/File")
 val sparklines = lines.filter(line => line.contains("spark")
 val shelllines = lines.filter(line => line.contains("shell") 
@@ -5,6 +15,7 @@ val sparkandshell= sparklines.union(shelllines)
 println("Input had " + sparkandshell.count() + " concerning lines")
 println("Here are 10 examples:")
 sparkandshell.take(10).foreach(println)
+```
 RDDs also have a collect() function to retrieve the entire RDD. This can be useful if your program filters RDDs down to a very small size and you’d like to deal with it locally. Keep in mind that your entire dataset must fit in memory on a single machine to use collect() on it, so collect() shouldn’t be used on large datasets.  
 Loading data into an RDD is lazily evaluated in the same way transformations are. So, when we call sc.textFile() , the data is not loaded until it is necessary. As with transformations, the operation (in this case, reading the data) can occur multiple times.
 
