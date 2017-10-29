@@ -40,14 +40,47 @@ Used most version: Soman
 while(at least one edge is not hooked):
 	for all edges do in parallel:
 		hook
+	end for
 	for each tree do in parallel:
 		multi pointer jumping
+	end for
 end while
 ```
 In above version, the algorithmic complexity is the same as SV version, the sequence we do hooking and pointer jumping doesn't change algorithmic complexity. In stead of doing a single pointer jumping after a parallel hooking, we do a iterative pointer jumping till that tree becomes a star tree. Then the hooking after multi pointer jumping is still the same as the level-1 hook in SV version. However, in the worst case, the while will need O(log(n)) iterations and each multi pointer jumping will have O(log(n)) iterations, then the runtime is O(log(n)^2). Seems Soman has a worse runtime, but it is favored by GPU since multi pointer jumping can be written into one kernel and has better memory access coalease and less branch divergence. Think about in this way, we aggregate all the possible pointer jumping together, then each memory fetch (several mem cache lines) will get better utilized in terms of how much pointer jumping can do comparing to SV version. At the same time, because it need to jump more than once, the ratio of runtime of the two divergent threads is large. Hence thread serialization penalty was minimized. However, in Soman's paper, he didn't compare the Soman version with SV version but only compare Soman's GPU version with Soman's CPU version. Shame. Anyway, seems everyone is using Soman version CC for GPU, it might just win because of its hardware utilization is higher then it runs faster.
 
+Adaptive CC:
+```math
+let \pi: \pi(vertex) <-- vertex
+let s <-- 2|E|/|V| 
+let {E_i}^{s}_{i=1} be s distinct subsets of E
+for i <-- 1, s do
+	for all e in E_i do in parallel
+		AtomicHook(e,\pi)
+	end for
+	for all v in V do in parallel
+		MultiJump(v, \pi)
+	end for
+end for
+return \pi
+```
 
-
+```math
+AtomicHook(e, \pi):
+while \pi(u)!=\pi(v) do
+	H <-- max{\pi(u), \pi(v)}
+	L <-- min{\pi(u), \pi(v)}
+	lock \pi(H)
+		if \pi(H) = H: then
+			\pi(H) <-- L
+			return
+		else
+			u <-- \pi(H)
+			v <-- L
+		end if
+	end lock
+end while
+```
+In the above AtomicHook code, it just travese all the way to the root and the overriden is atomic, then after one atomicHook with repected to all edges, the spanning tree or spanning forest are formed. After doing a multiJump on spanninging tree or forest, CC ids are updated. However, with only one atomicHook followed by a contraction, it may eliminates the ability to perform constant Contraction operations between each Hook round. Or think in this way, if we flatten the tree in advance, it takes shorter path to travers to the root when do atomicHook. So in the adaptive CC, it divide the edge-list into several segments which is approximatly $2|E|/|V|$. s is number of segments and also approximately average degree. Then Hook operations are always performed over segments proportional to the |V| memory workspace, reducing atomic contention. Each such segment Hook, is followd by a Contraction operation, flattening all component trees and minimizing atomic operations for the next segment Hook. As average degree increases, more Contraction operations will be performed, but their O(|V|) cost becomes minor compared to the dominating O(|E|) complexity of the overall algorithm. 
 
 Unfortunately, the memory access pattern of SV is unfovorable for implementation on a distributed memory system. The "shortcutting" step accesses the grandparent of a vertex u stored as D[D[u]], where D represents the parent relationship. When D is distributed among processors, accessing D[D[u]] generates erratic remote access. In addition, there will be a flood of messages going to the processor that owns the root of the tree as the root is accessed by each "pointer jumping". In addition, for both BFS and SV, the use of global barriers caues scaling problem when many processors are available. SV takes O(log n) barriers, while parallel BFS needs O(d) barriers. 
 
