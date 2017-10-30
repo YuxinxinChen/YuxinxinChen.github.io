@@ -146,5 +146,94 @@ end while
 ```
 In the above AtomicHook code, it just travese all the way to the root and the overriden is atomic, then after one atomicHook with repected to all edges, the spanning tree or spanning forest are formed. After doing a multiJump on spanninging tree or forest, CC ids are updated. However, with only one atomicHook followed by a contraction, it may eliminates the ability to perform constant Contraction operations between each Hook round. Or think in this way, if we flatten the tree in advance, it takes shorter path to travers to the root when do atomicHook. So in the adaptive CC, it divide the edge-list into several segments which is approximatly $2|E|/|V|$. s is number of segments and also approximately average degree. Then Hook operations are always performed over segments proportional to the |V| memory workspace, reducing atomic contention. Each such segment Hook, is followd by a Contraction operation, flattening all component trees and minimizing atomic operations for the next segment Hook. As average degree increases, more Contraction operations will be performed, but their O(|V|) cost becomes minor compared to the dominating O(|E|) complexity of the overall algorithm. 
 
-Unfortunately, the memory access pattern of SV is unfovorable for implementation on a distributed memory system. The "shortcutting" step accesses the grandparent of a vertex u stored as D[D[u]], where D represents the parent relationship. When D is distributed among processors, accessing D[D[u]] generates erratic remote access. In addition, there will be a flood of messages going to the processor that owns the root of the tree as the root is accessed by each "pointer jumping". In addition, for both BFS and SV, the use of global barriers caues scaling problem when many processors are available. SV takes O(log n) barriers, while parallel BFS needs O(d) barriers. 
+The good thing about Grout adaptive CC is that since it only requires 2\*number of segments iterations, it keeps global barrier minimized. Instead it uses more atomic operation to prevent overwritten then needs less global barrierr. #atomic operations are good friends to asynch.
+
+Some algorithm which claims it is better than adaptive CC:
+```c
+ECL_CC(V,E):
+Init(V, nstat)
+Compute(V,E,nstat)
+Flatten(V,nstat)
+```
+
+```c
+Init(V, nstat)
+nstat = {0,...., |V|-1}
+for each vertex v in V do in parallel:
+	nstat[v] <-- First neighbor smaller than v
+end for
+```
+
+```c
+Compute(V,E,nstat)
+for each v in V do in parallel:
+	vstat <-- representative(v,nstat)
+	for each edge(u,v) in E do in parallel:
+		if(v>u)
+			ostat <-- representative(u, nstat)
+			if(vstat < ostat)
+				nstat[ostat] <-- vstat
+			else 
+				nstat[vstat] <-- ostat
+			end if
+		end if
+	end for
+end for
+```
+
+```c
+Flatten(V,nstat)
+for each vertex v in V do in parallel:
+	vstat <-- nstat[v]
+	while(vstat > nstat[vstat])
+		vstat <-- nstat[vstat]
+	end while
+end for
+```
+
+```c
+Representative(v,nstat)
+curr <-- nstat[v]
+if(curr!=v)
+	prev <-- v
+	next <-- nstat[curr]
+	while(curr > next)
+		nstat[prev] <-- next
+		prev <-- curr
+		curr <-- next
+	end while
+end if
+```
+
+The above algorithm has several difference comparing the adaptive CC: 1) Instead of initilize the root of each vertex with its own id, it initilizes the root with the first neighbor smaller than it. 2) when hooking, it still trace back to the root same adaptive CC and use atomic operation to prevent overwitten, but instead of tracing only one as in the adaptive CC, it traces back the vertices on both end of edge. 3) When it trace back to the root, it also conducts an immediate pointer jumping along the way. In addition, it tries to do load balancing by dividing the vertex by its degree. It apply different scopy of thread to different degree vertex: thread-level to vertex with degree less than 16 and assigne a vertex to each thread, warp-level to vertex with degree between 16 to 512 and assign a warp to a vertex, block-level to vertex with degree larger than 512 and assign each block to a vertex. Hmmm....it claims it has better load balance. So why not just assign each thread to each edge but to do that in vertex way? One benefit could be in ECL-CC, we try to find the root of both side of an edge, for vertex u, we could find u's root only once and we might think connect two by the root should give us a shallower tree thus saving some contraction operation. But creating the vertex degree list is not free. I am not sure, in its experiment, if it includes the time to create the vertex degree double side list and it only shows slightly better than Grout adaptive CC.
+
+From above background algorithm, we may have a feeling, that at the beginning, to favor a parallel execution, CC algorithm relaxes the data correct requirment to do more number of iterations allowing data overwritten. However those iterations requires global barrier between. Then when we go toward asynchronous approach because of expensive global barrier, we return to the original approach: using atomic operation to ensure the data correctness and disallow overwritten, then reducing number of iterations we do. So I would say that the choice of the algorithm depends on which is the lesser of two evils between atomic operations and global barriers.
+
+Unfortunately, the memory access pattern of SV, Soman, Adaptive CC and ECL-CC are unfovorable for implementation on a distributed memory system. The "shortcutting" step accesses the grandparent of a vertex u stored as D[D[u]], where D represents the parent relationship. When D is distributed among processors, accessing D[D[u]] generates erratic remote access. In addition, there will be a flood of messages going to the processor that owns the root of the tree as the root is accessed by each "pointer jumping". In addition, for both BFS and SV, the use of global barriers caues scaling problem when many processors are available. SV takes O(log n) barriers, while parallel BFS needs O(d) barriers. 
+
+There are some other asynchronous algorithms use a very different appoarch instead of hooking+pointer jumping combined with atomic operations. It uses DFS to construct spanning tree. We call it Cong
+
+In Cong, it has two assumptions: global barrier and communication are expensive which is true for distributed system. So it aims to reduce both of them so it adopt DFS.
+```c
+DFS_T(u)
+if u is owned by local processor
+	for each neighbor v of u
+		send tuple (u,v) to the processor that owns v
+	end for
+end if
+wait for termination
+```
+```c
+Msg_Handler((u,v))
+if v is not visited
+	set v as visited
+	set v's parent as u
+	for each neighbor t of v
+		send tuple (v, t) to the processor that owns t
+	end for
+end if
+```
+ 
+In the above code, visited list is matained using atomic operation and the termination is all vertices assigned on that machine have been visited (which do not require to send back messages). Then the global barrier is replaced by recursive call to the next level of nodes which can be dynamically triggered. While you may argue the adaptive CC also minimized global barriers but it needs to travers back to root for each edge, this travers may result ton of message if there are many long path. Then since each edge will trigger a travers at least length of one, then there will be at least |E| messages flying around. However, because in Cong's method, each edge will only trigger a DFS on the other side of the edge and the other side of the edge may reside in the same machine, then there is almost |E| messages in the network. However, DFS has some other problems. Comparing the adaptive CC, it requires O(|V|) runtime in the worst case since it exposures less parallel, while adaptive CC is O(log|V|) if communication is ideal. Also DFS which dynamically fork threads is hard to map onto GPU.
+
 
