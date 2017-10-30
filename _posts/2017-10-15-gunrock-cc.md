@@ -9,73 +9,137 @@ share: false
 
 ## Connected Components
 
-Usually, there are two ways to find the connected components: label propagation and hook and pointer jumping (SV). TODO label propogation and hook and pointer jumping
+Usually, there are two ways to find the connected components: label propagation and hook and pointer jumping (SV). 
 Label propagation: 
 
 ```c
-while(there is at least one edge (u,v), Parent(u)!=Parent(v)):
-	for edges whose parent are not equal (i,j):
-		Max(Parent(i), Parent(j)) = Min(Parent(i), Parent(j))
+while there is at least one edge (u,v) such that label(u)!=label(v)
+	for each edge (i,j) such that label(i)!=label(j)
+		min = Min(label(i), lable(j))
+		label(i) = min
+		label(j) = min
 	end for
 end while	
 ```
-Then the Parent label will propagate from the vertex with min id to the vertex whose distance is 1 from min-id vertex, then distance 2 ....., farest vertex away from min-id vertex, like a wave. In the worst case, n nodes form a path with min-id in either of end, the runtime will be O(n). But generally, the resulting propagetion will form a tree whose depth is O(log(n)), then the runtime usually is O(log(n))
+Let x be the smallest label, and let v be the node whose initial label is x. The label x will propagate from v to the nodes at distance 1 from v, then to the nodes at distance 2 from v... and eventually to the farthest vertices from v, like a wave. In the worst case, n nodes form a path with the minimum label on one end, the runtime will be O(n). But in practice one would not be so unlucky.
 
 Hook and jumping:
 
 Oldest version: Shiloach & Vishkin
 ```c
-while(at least one edge is not hookded and trees are not star-trees):
-	for all edges try 1-level hook do in parallel
-	for each tree try single pointer jumping do in parallel
-	if stagnent happens:
-		hook anyway do in parallel
-		single pointer jumping do in parallel
+for each node u do in parallel
+	Parent(u) = u
+end for
+while trees are not star-trees or there are edges between star-trees
+	for each edge (u,v) where u or v is a root or a level-1 node do in parallel
+		hook(u,v)
+	end for
+	for each node u do in parallel
+		single-pointer-jumping(u)
+	end for
+	for each stagnant edge (u,v) do in parallel
+		hook_stagnant(u,v) anyway
+	end for
+	for each node u do in parallel
+		single-pointer-jumping(u)
+	end for	
 end while
 ```
-In above pseudocode code, 1-level hook means if there is a edge (u,v), Parent(u) > Parent(v) and u is root or has distance 1 from its root, then we hook the tree of u onto Parent of v. Single pointer jumping is, within a tree, for each node, do Parent(node) = Parent(Parent(node)). Stagnent happens when the level-1 node of any of the trees has a edge out but they couldn't hook up together, at the same time, every tree's root can not hook up onto other place or be hooked up by other nodes. Then we know we should been about to hook the level-1 node' root onto other tree but we couldn't because of its parent id is larger, so we choose to hook it up anyway, excluding the situation that hooking process is serialized because of small-id root are connected via a large-id root and making the hooking process always has a small constant cost. Then the runtime of SV algorithm is mainly occupied by single point jumping which has runtime of O(log(d)) where d is the depth of spinning tree formed. In the worst case, d can be n, 1 in the best case and log(n) in general case. So in the worst case, the runtime is O(log(log(n))) but generally there is not much difference between log(n) and log(log(n)). 
 
-Used most version: Soman
 ```c
-while(at least one edge is not hooked):
-	for all edges do in parallel:
-		hook
+hook(u,v)
+if u is a root or a level-1 node
+	if Parent(u) > Parent(v)
+		Parent(Parent(u)) = Parent(v)
+	end if
+end if
+if v is a root or a level-1 node
+	if Parent(v) > Parent(u)
+		Parent(Parent(v)) = Parent(u)
+	end if
+end if		  
+```
+
+```c
+single-point-jumping(u)
+Parent(u) = Parent(Parent(u))
+```
+
+```c
+hook(u,v)
+if u is a root or a level-1 node
+	Parent(Parent(u)) = Parent(v)
+end if
+
+if v is a root or a level-1 node
+	Parent(Parent(v)) = Parent(u)
+end if		  
+```
+
+A node u is a root if Parent(u) = u. A node u is a level-1 node if Parent(Parent(u)) = Parent(u). There are cases when hooks fails because the root or level-1 nodes’s parent is smaller than the parent of the other side of the edge, such an edge is called a stagnant edge. Then after all the available hook are finished, we call hook-stagnant to hook the stagnant edges anyway.
+The SV algorithm terminates after O(log(|V|)) iterations of the while loop. Each iteration has a constant cost, so the runtime is O(log(|V|)).
+
+Most commonly used version: Soman
+```c
+while trees are not star-trees or there are edges between star-trees
+	for each edge (u,v) do in parallel
+		hook(u,v)
 	end for
-	for each tree do in parallel:
-		multi pointer jumping
+	for each node u do in parallel
+		multi-pointer-jumping(u)
 	end for
 end while
 ```
-In above version, the algorithmic complexity is the same as SV version, the sequence we do hooking and pointer jumping doesn't change algorithmic complexity. In stead of doing a single pointer jumping after a parallel hooking, we do a iterative pointer jumping till that tree becomes a star tree. Then the hooking after multi pointer jumping is still the same as the level-1 hook in SV version. However, in the worst case, the while will need O(log(n)) iterations and each multi pointer jumping will have O(log(n)) iterations, then the runtime is O(log(n)^2). Seems Soman has a worse runtime, but it is favored by GPU since multi pointer jumping can be written into one kernel and has better memory access coalease and less branch divergence. Think about in this way, we aggregate all the possible pointer jumping together, then each memory fetch (several mem cache lines) will get better utilized in terms of how much pointer jumping can do comparing to SV version. At the same time, because it need to jump more than once, the ratio of runtime of the two divergent threads is large. Hence thread serialization penalty was minimized. However, in Soman's paper, he didn't compare the Soman version with SV version but only compare Soman's GPU version with Soman's CPU version. Shame. Anyway, seems everyone is using Soman version CC for GPU, it might just win because of its hardware utilization is higher then it runs faster.
+
+```c
+hook(u,v)
+if Parent(u) > Parent(v)
+	Parent(u) = Parent(v)
+else Parent(v) = Parent(u)
+end if
+```
+
+```c
+multi-pointer-jumping(u)
+while Parent(Parent(u))!=Parent(u)
+	Parent(u) = Parent(Parent(u))
+end while
+```
+
+Similar to SV, Soman’s algorithm alternates between parallel hooking and parallel multi-pointer-jumping. The main difference is that instead of single-pointer-jumping used in SV, Soman performs multi-pointer jumping, i.e. we do iterative pointer jumping till every tree is a star-tree. Thus, each parallel hooking is performed on depth-1 trees. This exposes more candidate edges for hooking. In contrast, in SV, some edges have both endpoints deeper than level 1, and are ineligible for hooking.
+Furthermore, if we flatten the tree sooner, the next hooking has a better chance to hook to a root. SV may create a very deep tree. 
+
+However, in Soman, in the worst case, the while loop will need O(log(n)) iterations and each multi-pointer-jumping will have O(log(n)) iterations, so the runtime is O(log(n)^2). It seems that Soman has a worse runtime, but it is also favored by GPU since multi-pointer-jumping can be written into one kernel and has better memory access coalesce and less branch divergence. Think about in this way: we aggregate all the possible pointer jumping together, then each memory fetch (several mem cache lines) will get better utilized in terms of how much pointer jumping can do comparing to SV version.  At the same time, because it need to jump more than once, the ratio of runtime of the two divergent threads is large. Hence thread serialization penalty was minimized.
 
 Adaptive CC:
-```math
-let \pi: \pi(vertex) <-- vertex
-let s <-- 2|E|/|V| 
-let {E_i}^{s}_{i=1} be s distinct subsets of E
-for i <-- 1, s do
-	for all e in E_i do in parallel
-		AtomicHook(e,\pi)
+```c
+for each node u do in parallel
+	Parent(u) = u
+end for
+s = 2|E|/|V| 
+let E_1 ….E_s be s distinct subsets of E
+for each E_i
+	for each edge (u,v) in E_i do in parallel
+		AtomicHook((u,v))
 	end for
 	for all v in V do in parallel
-		MultiJump(v, \pi)
+		MultiJump(v)
 	end for
 end for
-return \pi
 ```
 
-```math
-AtomicHook(e, \pi):
-while \pi(u)!=\pi(v) do
-	H <-- max{\pi(u), \pi(v)}
-	L <-- min{\pi(u), \pi(v)}
-	lock \pi(H)
-		if \pi(H) = H: then
-			\pi(H) <-- L
+```c
+AtomicHook((u,v)):
+while Parent(u)!=Parent(v) do
+	H = max{Parent(u), Parent(v)}
+	L = min{Parent(u), Parent(v)}
+	lock Parent(H)
+		if Parent(H) = H: then
+			Parent(H) = L
 			return
 		else
-			u <-- \pi(H)
-			v <-- L
+			u = Parent(H)
+			v = L
 		end if
 	end lock
 end while
