@@ -223,6 +223,7 @@ There are some other asynchronous algorithms which use a very different approach
 ### Cong's algorithm
 
 In Cong, it has two assumptions: global barrier and communication are expensive which is true for distributed system. So it aims to reduce both of them so it adopts DFS.
+
 ```c
 DFS_T(u)
 if u is owned by local processor
