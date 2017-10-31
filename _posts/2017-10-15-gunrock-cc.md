@@ -7,11 +7,11 @@ comments: true
 share: false
 ---
 
-### Connected Components
+## Weakly Connected Components
 
 Usually, there are two ways to find the connected components: label propagation and hook and pointer jumping (SV). 
 
-## Label propagation: 
+### Label propagation: 
 
 ```c
 while there is at least one edge (u,v) such that label(u)!=label(v)
@@ -26,7 +26,7 @@ Let x be the smallest label, and let v be the node whose initial label is x. The
 
 Hook and jumping:
 
-## Oldest version: Shiloach & Vishkin
+### Oldest version: Shiloach & Vishkin
 
 ```c
 for each node u do in parallel
@@ -81,7 +81,7 @@ end if
 A node u is a root if Parent(u) = u. A node u is a level-1 node if Parent(Parent(u)) = Parent(u). There are cases when hooks fails because the root or level-1 nodes’s parent is smaller than the parent of the other side of the edge, such an edge is called a stagnant edge. Then after all the available hook are finished, we call hook-stagnant to hook the stagnant edges anyway.
 The SV algorithm terminates after O(log(|V|)) iterations of the while loop. Each iteration has a constant cost, so the runtime is O(log(|V|)).
 
-## Most commonly used version: Soman
+### Most commonly used version: Soman
 
 ```c
 while trees are not star-trees or there are edges between star-trees
@@ -116,7 +116,7 @@ However, in Soman, in the worst case, the while loop will need O(log(n)) iterati
 
 Note that the parallel hooks are not locked, so some hooking may end up being overwritten. This race condition is benign, as it only affects the runtime of the algorithm, but not the final correctness of the output CC.
 
-## Adaptive CC:
+### Adaptive CC:
 
 ```c
 for each node u do in parallel
@@ -154,7 +154,7 @@ In adaptive CC, when hooking an edge, the node with a higher Parent ID will trav
 
 The good thing about Grout adaptive CC is that since it only requires 2\*number of segments global barrier, it keeps global barrier minimized. Instead it uses atomic operations to prevent overwritten and thus needs less global barriers. #atomic operations are good friends to asynch.
 
-## Some algorithm which claims it is better than adaptive CC:
+### Some algorithm which claims it is better than adaptive CC:
 
 ```c
 ECL_CC(V,E):
@@ -220,7 +220,7 @@ Unfortunately, the memory access pattern of SV, Soman, Adaptive CC and ECL-CC ar
 
 There are some other asynchronous algorithms which use a very different approach from hooking+pointer-jumping combined with atomic operations. It uses DFS to construct spanning trees. We call it Cong
 
-## Cong's algorithm
+### Cong's algorithm
 
 In Cong, it has two assumptions: global barrier and communication are expensive which is true for distributed system. So it aims to reduce both of them so it adopts DFS.
 ```c
@@ -245,8 +245,65 @@ end if
  
 In the above code, visited list is maintained using atomic operation and the termination condition for each machine is all vertices assigned on that machine have been visited (which do not require to send back messages). Then the global barrier is replaced by recursive call to the next level of nodes which can be dynamically triggered. While you may argue the adaptive CC algorithm also minimizes global barriers, but it needs to travers back to the root for each edge, this traversal may result in tons of messages especially when the paths to roots are long. Then since each edge will trigger a traversal of length at least one, then there will be at least |E| messages flying around. However, because in Cong's method, each edge will only trigger a DFS on the other side of the edge and the other side of the edge may reside in the same machine, then there is at most |E| messages in the network. However, DFS has some other problems. Compared to adaptive CC, it requires O(|V|) runtime in the worst case since it exposes less parallelism, while adaptive CC is O(log|V|) if communication is ideal. Also DFS_T which dynamically forks threads is hard to map onto GPU.
 
-### Pull-based model VS Push-based model
+## Pull-based model VS Push-based model
 
 Pull-based model: When data exchanges needed between two or more threads, processor, machines, in pull-based approach, one thread will try to access the data another threads is working on (processor access data another processor working on, or one machine send an mem access request on network to another machine). Because it might pull inconsistent data from any concurrently executing neighbours, pull-based asynchronous implementation need to use lock to ensure data inconsistency.Gather, Apply and Scatter (GAS) model is pull-based and its asynchronous implementation uses distributed locking to ensure data consistency.
 
 Push-based model: The information is sended explicitly after finishing the computation related to that piece of information. Then the receiver receive the consistent information passively. However it requires the sender push the message explicitly. Since messages are buffered in a local message store, concurrent reads and writes to the store can be handled locally with local locks or lock-free data structure. 
+
+## Strongly Connected Components (SCC)
+
+### Serial Algorithm
+
+Tarjan's algorithm is a serial algorithm using DFS to find the SCC. The algorithm perform linear O(|V|+|E|) work. The reason the serial algorithm is mentioned here because sometimes, using serial algorithm is faster = =
+
+### Forward-Backward Algorithm
+
+```c
+FW_BW(V)
+if V is not empty then
+	return
+end if
+Select a pivot u in V
+D = BFS(G(V, E(V)), u)
+P = BFS(G(V, E'(V)), u)
+R = (V exclude (P union D))
+S = P intersection D
+
+launch do in parallel
+	FW_BW(D exclude S)	
+	FW_BW(P exclude S)
+	FW_BW(R)
+end do
+```
+In FW_BW pseudo code, V denotes the set of nodes in the graph, E(V) is the set of outgoing edges for set nodes V, and E'(V) is the set of incoming edges  for set nodes V. Given the graph G(V, E), a pivot vertex u is selected. This can be done either randomly or through simple heuristics. A BFS search is conducted starting from the vertex to determine all nodes which are reachable from u (the forward sweep). These nodes form the descendant set D. Another BFS is performed from u, but on G(V,E'). This search (the backward sweep) will find the set P of all nodes that can reach u, called the predecessor set. The intersection of these two sets forms an SCC that has the pivot u in it. If we remove all nodes in S from the graph, we can have up to three remainning disjoint node set: (D exclude S), (P exclude S) and the remainder R, which is the set of nodes that we have not explored during either search from u. The FW_BW algorithm can then be recursively called on each of these three sets. Note, there is parallelism on two levels. As the three sets are disjoint, they can each be explored in parallel. Also, we do not require any vertex ordering within each set, just reachability. Therefore, each of the forward and backward searches can be easily parallelized or run concurrently. For graphs with bounded constant node degree, FW_BW is shown to perform O(nlog(n)) expected case work.	
+
+Usually, a rountine called trimming is performed before executing FW-BW. The procedure is quite simple: all nodes that have an in-degree or out-degree of zero are removed. Trimming can also be performed recursively, as removing a node will change the effective degrees of its neighbors. Single iteration of trimming is called simple trimming and iterative trimming is called complete trimming. Usually, the marginal benefit to do more triming is decreasing.
+
+### Coloring Algorithm
+
+```c
+ColorSCC(G(V,E))
+while G is not empty do
+	for all u in V do in parallel
+		Colors(u) = u
+	end for
+	while at least one node has changed colors do
+		for all u in V do in parallel
+			for all (u,v) in E do in parallel
+				if Colors(u) > Colors(v)
+					Colors(v) = Colors(u)
+				end if
+			end for
+		end for
+	end while
+
+	for all unique c in Colors in parallel do
+		Vc = {u in V: Colors(u) = c}
+		SCVc = BFS(G(Vc, E'(Vc)), u)
+		V = (V excludes SCVc)
+	end for
+end while
+```
+
+Assume that the graph nodes are numbered from 1 to n. The algorithm starts by initializing elements of array Colors to node ID. The values are then propagated outward from each node in the graph, until there are no further changes to Colors. Then effectively partitions the graph into disjoint set. As we initialized Colors to node ID, there is a unique node correponding to every distinct c in Colors. We consider u = c as the root of a new SCC, SCVc. The set of reachable nodes in the backward seep from u of nodes of the same color(Vc) belong to this SCVc. We then remove all these nodes from V and proceed to the next color/iteration. The two subroutines ameable to parallelization are the color propagation step and the backward sweep. In a graph with a very large SCC and high diameter, the color of the root node has to be propagated to all of the nodes in the SCC, limiting the efficiency of the color propagation step. 
