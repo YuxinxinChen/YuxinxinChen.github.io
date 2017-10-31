@@ -1,16 +1,17 @@
 ---
 layout: post
-title: "Gunrock Reading Notes"
-data: 2017-10-10
+title: "Connected Components Reading Notes"
+data: 2017-10-15
 tags: [reading notes, GPU]
 comments: true
 share: false
 ---
 
-## Connected Components
+### Connected Components
 
 Usually, there are two ways to find the connected components: label propagation and hook and pointer jumping (SV). 
-Label propagation: 
+
+## Label propagation: 
 
 ```c
 while there is at least one edge (u,v) such that label(u)!=label(v)
@@ -25,7 +26,8 @@ Let x be the smallest label, and let v be the node whose initial label is x. The
 
 Hook and jumping:
 
-Oldest version: Shiloach & Vishkin
+## Oldest version: Shiloach & Vishkin
+
 ```c
 for each node u do in parallel
 	Parent(u) = u
@@ -79,7 +81,8 @@ end if
 A node u is a root if Parent(u) = u. A node u is a level-1 node if Parent(Parent(u)) = Parent(u). There are cases when hooks fails because the root or level-1 nodes’s parent is smaller than the parent of the other side of the edge, such an edge is called a stagnant edge. Then after all the available hook are finished, we call hook-stagnant to hook the stagnant edges anyway.
 The SV algorithm terminates after O(log(|V|)) iterations of the while loop. Each iteration has a constant cost, so the runtime is O(log(|V|)).
 
-Most commonly used version: Soman
+## Most commonly used version: Soman
+
 ```c
 while trees are not star-trees or there are edges between star-trees
 	for each edge (u,v) do in parallel
@@ -113,7 +116,8 @@ However, in Soman, in the worst case, the while loop will need O(log(n)) iterati
 
 Note that the parallel hooks are not locked, so some hooking may end up being overwritten. This race condition is benign, as it only affects the runtime of the algorithm, but not the final correctness of the output CC.
 
-Adaptive CC:
+## Adaptive CC:
+
 ```c
 for each node u do in parallel
 	Parent(u) = u
@@ -150,7 +154,8 @@ In adaptive CC, when hooking an edge, the node with a higher Parent ID will trav
 
 The good thing about Grout adaptive CC is that since it only requires 2\*number of segments global barrier, it keeps global barrier minimized. Instead it uses atomic operations to prevent overwritten and thus needs less global barriers. #atomic operations are good friends to asynch.
 
-Some algorithm which claims it is better than adaptive CC:
+## Some algorithm which claims it is better than adaptive CC:
+
 ```c
 ECL_CC(V,E):
 Init(V, nstat)
@@ -214,6 +219,8 @@ From above exhibition of CC algorithms, we may have a feeling that at the beginn
 Unfortunately, the memory access pattern of SV, Soman, Adaptive CC and ECL-CC are unfavorable for implementation on a distributed memory system. The “Jump” step accesses the grandparent of a vertex u stored as D[D[u]], where D represents the parent relationship. When D is distributed among processors, accessing D[D[u]] generates erratic remote access. In addition, there will be a flood of messages going to the processor that owns the root of the tree as the root is accessed by each "pointer jumping". In addition, for both BFS and SV, the use of global barriers causes scaling problem when many processors are available. SV takes O(log n) barriers, while parallel BFS needs O(d) barriers. 
 
 There are some other asynchronous algorithms which use a very different approach from hooking+pointer-jumping combined with atomic operations. It uses DFS to construct spanning trees. We call it Cong
+
+## Cong's algorithm
 
 In Cong, it has two assumptions: global barrier and communication are expensive which is true for distributed system. So it aims to reduce both of them so it adopts DFS.
 ```c
