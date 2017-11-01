@@ -363,4 +363,45 @@ Multistep uses FW-BW to find the largest SCC first and then use Coloring algorit
 
 Note, MS-Coloring can be run asynchronously. 
 
+### UFSCC algorithm
 
+```c
+UFSCC code for worker p
+for every v in V
+	S(v) = {v}
+end for
+DEAD = DONE = empty set
+for every worker p in P
+	R_p = empty stack
+end for
+for each worker p in P
+	UFSCC_p(v0)
+end for
+```
+
+```c
+UFSCC_P(v)
+R_p.push(v)
+while v' in S(v) \ DONE 
+	for each w in RANDOM(post(v')) do
+		if w in DEAD then continue
+		else if there is not w' in R_p: w in S(w') then
+			UFSCC_p(w)
+		else while S(v)!=S(w) do
+			r = R_p.pop
+			UNITE(S,r, R_p.TOP())
+		end if
+	end for
+	DONE = DONE union {v'}
+	if S(v) not in DEAD
+		DEAD = DEAD union S(v)
+		report SSC S(v)
+	end if
+	if v = R_p.TOP()
+		R_p.pop()
+end while
+```
+
+The strongly connected components are tracked in a collection of disjoint sets (union-find data structure), which we represent using a map: S: V => 2^V with the invariant: for any v, w in V: w belongs to S(v) <=> S(v) = S(w). We denote an edge (v, v') in E as v -> v'. post(v) is a successors function: post(v) = {w|v -> w}. S(a) \ S(b) will get a set of elements in S(a) but not in S(b). \ means excluding here. UNITE function on S mergers two mapped sets. 
+
+The algorithm of each work is based on DFS and Set operations. It use recursion to push connecting nodes and when it pushes a node already in stack, it forms a cycle then is a SCC (because SCC are formed with cycles). More strict proof of its correctness is in its [paper](https://dl.acm.org/citation.cfm?id=2851161). Anyway, UFSCC_P itself can find a (partial) SCC. Then P workers randomly process th graph starting from v0 and prune each other's search space by communicating parts of the graph that have been processed.
