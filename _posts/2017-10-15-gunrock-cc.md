@@ -308,3 +308,59 @@ end while
 ```
 
 Assume that the graph nodes are numbered from 1 to n. The algorithm starts by initializing elements of array Colors to node ID. The values are then propagated outward from each node in the graph, until there are no further changes to Colors. Then effectively partitions the graph into disjoint set. As we initialized Colors to node ID, there is a unique node correponding to every distinct c in Colors. We consider u = c as the root of a new SCC, SCVc. The set of reachable nodes in the backward seep from u of nodes of the same color(Vc) belong to this SCVc. We then remove all these nodes from V and proceed to the next color/iteration. The two subroutines ameable to parallelization are the color propagation step and the backward sweep. In a graph with a very large SCC and high diameter, the color of the root node has to be propagated to all of the nodes in the SCC, limiting the efficiency of the color propagation step. 
+
+### Multistep Algorith
+
+```c
+MULTISTEP(G(V,E))
+T = SimpleTrim(G)
+V = V exclude T
+Select v in V for which din(v)*dout(v) is maximal
+D = BFS(G(V,E(V)), v)
+S = D intersection BFS(G(D,E'(D)), v)
+V = V exclude S
+while NumNodes(V)>n_cutoff do
+	C = MS-ColorSCC(G(V,E(V)))
+	V = V exclude C
+Tarjan(G(V, E(V)))
+```
+
+```c
+MS-ColorSCC(G(V,E(V)))
+for all v in V do in parallel
+	Color(v) = v
+	add v to Q
+  	Visited(v) = false
+end for
+
+while Q is not empty do
+	for all v in Q do in parallel
+		for (u,v) in E(V) do
+			if Color(v) > Color(u) then
+				Color(u) = Color(v)
+				if Visited(u) = false then
+					Visited(u) = true
+					Add u to Q_t
+				end if
+			end if
+		end for
+		if any u changed color then
+			if Visited(v) = false then
+				Visited(v) = true
+				Add v to Q_t
+			end if
+		end if
+	for all v in Q_t do in parallel 
+		Visited(v) = false
+	end for
+	Barrier
+	Q = merge all Q_t
+end while
+```
+This is a hybrid algrithm combining serial algorithm, FW-BW algorithm and Coloring Algorithm. It is based on the observation that FW-BW is efficient if a graph has a relatively small number of large and equally-sized SCCs, as the leftover partitions in each step could, on average, result in similar amounts of task-parallel work. Then if a graph has a big SCC and a lot of small SCCs, FW-BW would result in a large work imbalance. Conversely, the coloring algorithm is quite efficient when the graph has a large number of small and disconnected SCCs. The runtime of each coloring step is proportional to the diameter of the largest connected component in the graph. The time for each step can be very high when the largest SCCs remain, and there is no guarantee that these SCCs will be removed in any of the first few iterations. When the number of nodes in the graph is less than a threshold, all parallel algorithms perform poorly over serial algorithm like Tarjan's algorithm because of parallel overhead.
+
+Multistep uses FW-BW to find the largest SCC first and then use Coloring algorithm to find the remaining small SCCs. Last, after the number of nodes drop to certain threshold, it uses serial algorithm. 
+
+Note, MS-Coloring can be run asynchronously. 
+
+
