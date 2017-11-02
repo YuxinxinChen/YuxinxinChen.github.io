@@ -405,3 +405,8 @@ end while
 The strongly connected components are tracked in a collection of disjoint sets (union-find data structure), which we represent using a map: S: V => 2^V with the invariant: for any v, w in V: w belongs to S(v) <=> S(v) = S(w). We denote an edge (v, v') in E as v -> v'. post(v) is a successors function: post(v) = {w|v -> w}. S(a) \ S(b) will get a set of elements in S(a) but not in S(b). \ means excluding here. UNITE function on S mergers two mapped sets. 
 
 The algorithm of each work is based on DFS and Set operations. It use recursion to push connecting nodes and when it pushes a node already in stack, it forms a cycle then is a SCC (because SCC are formed with cycles). More strict proof of its correctness is in its [paper](https://dl.acm.org/citation.cfm?id=2851161). Anyway, UFSCC_P itself can find a (partial) SCC. Then P workers randomly process th graph starting from v0 and prune each other's search space by communicating parts of the graph that have been processed.
+
+
+### Irregular Algorithms?? Ordered or unordered??
+
+Many problems are irregular since they use pointer-based data structures such as trees and graphs. So how's the structure of parallelism and locality in irregular algorithm? A major complication is that dependences in irregular algorithm
