@@ -423,3 +423,7 @@ An interesting thing is the edge are divided into 2|E|/|V| segments. Then in eac
 
 Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is hard to estimated. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
 
+
+## Irregular Algorithms?? Ordered or unordered??
+
+Many problems are irregular since they use pointer-based data structures such as trees and graphs. So how's the structure of parallelism and locality in irregular algorithm? A major complication is that dependences in irregular algorithm
