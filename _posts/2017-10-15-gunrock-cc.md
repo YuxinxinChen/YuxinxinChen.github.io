@@ -22,7 +22,7 @@ while there is at least one edge (u,v) such that label(u)!=label(v)
 	end for
 end while	
 ```
-Let x be the smallest label, and let v be the node whose initial label is x. The label x will propagate from v to the nodes at distance 1 from v, then to the nodes at distance 2 from v... and eventually to the farthest vertices from v, like a wave. In the worst case, n nodes form a path with the minimum label on one end, the runtime will be O(n). But in practice one would not be so unlucky.
+
 
 Hook and jumping:
 
@@ -405,3 +405,21 @@ end while
 The strongly connected components are tracked in a collection of disjoint sets (union-find data structure), which we represent using a map: S: V => 2^V with the invariant: for any v, w in V: w belongs to S(v) <=> S(v) = S(w). We denote an edge (v, v') in E as v -> v'. post(v) is a successors function: post(v) = {w|v -> w}. S(a) \ S(b) will get a set of elements in S(a) but not in S(b). \ means excluding here. UNITE function on S mergers two mapped sets. 
 
 The algorithm of each work is based on DFS and Set operations. It use recursion to push connecting nodes and when it pushes a node already in stack, it forms a cycle then is a SCC (because SCC are formed with cycles). More strict proof of its correctness is in its [paper](https://dl.acm.org/citation.cfm?id=2851161). Anyway, UFSCC_P itself can find a (partial) SCC. Then P workers randomly process th graph starting from v0 and prune each other's search space by communicating parts of the graph that have been processed.
+
+
+## Communication volumn of Adaptive CC and Soman CC
+
+Define a graph G(V,E) where V is all the nodes in the graph G and E is all the edges in the graph G. Suppose there are P processors. d_ave denotes the average degree of graph G.
+
+### Soman CC
+
+In Soman CC, edges and nodes are evenly distributed on P processors, and at least one end of the edge is on the processor who owns that edge. Suppose there are S iterations to finish. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border will exchange information (connected component ID). In the worst case, every nodes of the graph is on the partition border, for every partition, there are oder of |V| nodes information transferred to other partitions, thus the communication volumn is P\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? 
+
+### Adaptive CC
+
+In Adaptive CC, all edges |E| are tring to hook and each hook operation may result in a traversal across partitions because the higher Id node will traverse back to the root and hook onto the root which also ensure the resulting tree couldn't be very high. So in the worst case, every hook operation result a traversal in multiple partition. From MST, the hight of the tree is bounded by log\*|V| which is less than 5. So number of partiton traversed is bounded by log\*|V|. Total communication volumn for hooking is |E|log\*|V| < 5|E|. 
+Some apply to multiple pointer jumping, each node try to do pointer jumping and in the worst case, every pointer jumping results in a traveral in log\*|V| partition. So the total communication volumn for pointer jumping is |V|log\*|V|\*2|E|/|V| < 5|V|\*2|E|/|V|=2.5|E|. Total communication volume is bounded by O(|E|).
+An interesting thing is the edge are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, then the communication happend here can be overlapped. So 2.5|V|(e.g. 5\*|V|/2) volume of communication can be overlapped and 2|E|/|V| of those communication has to be in sequence. It is interesting to estimiated how much of the communication can be overlapped. Comparing to the Soman CC, there is P\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is P|V|/g which g is bandwidth. 
+
+Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is hard to estimated. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
+
