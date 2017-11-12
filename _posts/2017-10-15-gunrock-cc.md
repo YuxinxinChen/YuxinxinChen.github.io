@@ -424,6 +424,21 @@ An interesting thing is the edge are divided into 2|E|/|V| segments. Then in eac
 Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is hard to estimated. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
 
 
+## Cost of Async and Sync
+
+Async = C + M + AT, where C is computation cost, M is communication cost and AT is atomic cost
+
+Sync = C' + M' + SC, where C' is computation cost, M' is communication cost, and SC is synchronization cost.
+
+C' < C 
+M and M' is hard to compare, we know C is O(|E|), since the graph is scale-free, then |E| < |V|^2 and we don't know how much of the work can overlap. C' is O(|V|\*P*S), S is constant from experiment experience and P is actually constant too plus the time to finish C' is |V|*P/g*S where g is the bandwidth. 
+AT = number of unoverlapped atomic operation * t, where t is the time to finish an atomic operation
+SC = S * s, where s is the time cost for synchronization.
+
+AT and SC are also hard to compare, since we can only say s and t are some constant, but S? How about number of unoverlapped atomic operation, actually, the unoverlapped atomic operation can be the depth of the resulting spanning tree and we could estimated it as log|V|. What is the relationship between log|V| and S??
+
+I think let's run simulations.
+
 ## Irregular Algorithms?? Ordered or unordered??
 
 Many problems are irregular since they use pointer-based data structures such as trees and graphs. So how's the structure of parallelism and locality in irregular algorithm? A major complication is that dependences in irregular algorithm
