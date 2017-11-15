@@ -441,6 +441,10 @@ Summary: Syn = C' + 5\*((P-1)\*|V|/bandwith) + 5\*s
 
 I think let's run simulations.
 
+### DFS on GPU
+
+I read that DFS on GPU paper, it uses three BFS and some scheme to do DFS. Then we can not use Cong's DFS asynchronous CC on GPU using that DFS-ON-GPU techique since BFS and asynchronous seem contradict to each other. In DFS-ON-GPU paper, the BFS uses iteration synchronization. Not what we want. Pass.
+
 ## Irregular Algorithms?? Ordered or unordered??
 
 Many problems are irregular since they use pointer-based data structures such as trees and graphs. So how's the structure of parallelism and locality in irregular algorithm? A major complication is that dependences in irregular algorithm
