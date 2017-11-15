@@ -413,15 +413,15 @@ Define a graph G(V,E) where V is all the nodes in the graph G and E is all the e
 
 ### Soman CC
 
-In Soman CC, edges and nodes are evenly distributed on P processors, and at least one end of the edge is on the processor who owns that edge. Suppose there are S iterations to finish. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border will exchange information (connected component ID). In the worst case, every nodes of the graph is on the partition border, for every partition, there are oder of |V| nodes information transferred to other partitions, thus the communication volumn is P\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? 
+In Soman CC, edges and nodes are evenly distributed on P processors, and at least one end of the edge is on the processor who owns that edge. Suppose there are S iterations to finish. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border will exchange information (connected component ID). In the worst case, every nodes of the graph is on the partition border, for every partition, there are oder of |V| nodes information transferred to other partitions, thus the communication volumn is P\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? A good feature about Soman CC is that we know S is well bounded by 5, a small constant. 
 
 ### Adaptive CC
 
 In Adaptive CC, all edges |E| are tring to hook and each hook operation may result in a traversal across partitions because the higher Id node will traverse back to the root and hook onto the root which also ensure the resulting tree couldn't be very high. So in the worst case, every hook operation result a traversal in multiple partition. From MST, the hight of the tree is bounded by log\*|V| which is less than 5. So number of partiton traversed is bounded by log\*|V|. Total communication volumn for hooking is |E|log\*|V| < 5|E|. 
-Some apply to multiple pointer jumping, each node try to do pointer jumping and in the worst case, every pointer jumping results in a traveral in log\*|V| partition. So the total communication volumn for pointer jumping is |V|log\*|V|\*2|E|/|V| < 5|V|\*2|E|/|V|=2.5|E|. Total communication volume is bounded by O(|E|).
+Some apply to multiple pointer jumping, each node try to do pointer jumping and in the worst case, every pointer jumping results in a traveral in log\*|V| partition. So the total communication volumn for pointer jumping is |V|log\*|V| < 5|V|. Total communication volume is bounded by O(|E|+|V|).
 An interesting thing is the edge are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, then the communication happend here can be overlapped. So 2.5|V|(e.g. 5\*|V|/2) volume of communication can be overlapped and 2|E|/|V| of those communication has to be in sequence. It is interesting to estimiated how much of the communication can be overlapped. Comparing to the Soman CC, there is P\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is P|V|/g which g is bandwidth. 
 
-Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is hard to estimated. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
+Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is at most 5, well bounded by a small constant. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
 
 
 ## Cost of Async and Sync
@@ -430,12 +430,17 @@ Async = C + M + AT, where C is computation cost, M is communication cost and AT 
 
 Sync = C' + M' + SC, where C' is computation cost, M' is communication cost, and SC is synchronization cost.
 
-C' < C 
-M and M' is hard to compare, we know C is O(|E|), since the graph is scale-free, then |E| < |V|^2 and we don't know how much of the work can overlap. C' is O(|V|\*P*S), S is constant from experiment experience and P is actually constant too plus the time to finish C' is |V|*P/g*S where g is the bandwidth. 
-AT = number of unoverlapped atomic operation * t, where t is the time to finish an atomic operation
-SC = S * s, where s is the time cost for synchronization.
+C' < C, C is O(E) and C' is O(|V|\*P\*S), S is constant from experiment experience and P is actually constant too. 
 
-AT and SC are also hard to compare, since we can only say s and t are some constant, but S? How about number of unoverlapped atomic operation, actually, the unoverlapped atomic operation can be the depth of the resulting spanning tree and we could estimated it as log|V|. What is the relationship between log|V| and S??
+M and M' is hard to compare, 1) for Soman, M' = (((P-1)\*|V|)/bandwith)\*5. Say P is 11, then if bandwith is larger, M' is not significant and well bounded by O(|V|). 2) for adaptive, M = (((|V|/2+|V|)\*5)/overlap ratio)\*(2\*|E|/|V|), only this portion: (((|V|/2+|V|)\*5)/overlap ratio) can be overlaped. If the overlap ratio is |V|, then this portion is a small constant less then 5, then M is well bounded by O(|E|/|V|).  Since the graph is scale-free, then |E| < |V|^2 and the communication under the condition that overlap ratio is |V| is less than Soman's or Sync's. However we don't know how much of the work can overlap.  
+
+AT = |V|/ratio of overlapped atomic operation * t, where t is the time to finish an atomic operation. In adaptive CC, in each segment, there are |V|/2 hooking working on |V| memory space. Then if the ratio of overlapped atomic operation is |V|, AT is just a small constant\*t. 
+SC = S * s, where s is the time cost for synchronization. We know S is less 5. 
+
+AT and SC are also hard to compare, since we can only say s and t are some constant. How many unoverlapped atomic operation, actually, the unoverlapped atomic operation can be the depth of the resulting spanning tree and we could estimated it as log|V| in the worst case (suspicious). 
+
+Summary: Syn = C' + 5\*((P-1)\*|V|/bandwith) + 5\*s
+	 Asyn = C + ((|V|/2 + |V|)*5/overlap ratio)\*(2*|E|/|V|) + |V|/(2\*atomic overlap ratio)\*t
 
 I think let's run simulations.
 
