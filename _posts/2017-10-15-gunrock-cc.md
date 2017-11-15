@@ -423,7 +423,7 @@ Same story applies to multiple pointer jumping, each node try to do pointer jump
 
 An interesting thing is, in actual implementation, the edges are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, either end of the edge will traverse back to root and hook with the lower-than-root-ID node along the parent path of the other end of that edge. So in the most idea case, those |V|/2 hook will not traverse cross the partitions. So for each segments, then there is not communication cost. In the worst case, each edge traversa 5 partitions, however they can be overlapped by each other somehow. Then if they are perfect overlapped, the time used for communication is only 5\*communication_cost_cross_partition even though the communication volum is still 2.5|V|(e.g. 5\*|V|/2). 2|E|/|V| of those communication has to be in sequence. It is interesting to estimiated how much of the communication can be overlapped. Comparing to the Soman CC, there is (P-1)\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is (P-1)\*|V|/g which g is bandwidth. 
 
-## Cost of Async and Sync
+### Cost of Async and Sync
 
 Async = C + M + AT, where C is computation cost, M is communication cost and AT is atomic cost
 
