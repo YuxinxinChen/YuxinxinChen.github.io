@@ -421,9 +421,6 @@ In Adaptive CC, all edges |E| are tring to hook and each hook operation may resu
 Some apply to multiple pointer jumping, each node try to do pointer jumping and in the worst case, every pointer jumping results in a traveral in log\*|V| partition. So the total communication volumn for pointer jumping is |V|log\*|V| < 5|V|. Total communication volume is bounded by O(|E|+|V|).
 An interesting thing is the edge are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, then the communication happend here can be overlapped. So 2.5|V|(e.g. 5\*|V|/2) volume of communication can be overlapped and 2|E|/|V| of those communication has to be in sequence. It is interesting to estimiated how much of the communication can be overlapped. Comparing to the Soman CC, there is P\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is P|V|/g which g is bandwidth. 
 
-Regardless of the above, just comparing O|E| with P|V|S is hard. In the complete graph, |E|=|V|^2 and S is at most 5, well bounded by a small constant. Or we could say |E|=|V|\*d_ave. However, the relationship between d_ave and S is hard to find.
-
-
 ## Cost of Async and Sync
 
 Async = C + M + AT, where C is computation cost, M is communication cost and AT is atomic cost
