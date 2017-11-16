@@ -438,10 +438,12 @@ SC = S * s, where s is the time cost for synchronization. We know S is less 5.
 
 AT and SC are also hard to compare, since we can only say s and t are some constant. How many unoverlapped atomic operation, actually, the unoverlapped atomic operation can be sum of degree of all nodes in the worst case. But I don't think it happens often. Actually I don't think it can be so unlucky. 
 
-Summary: Syn = C' + 5\*((P-1)\*|V|/bandwith) + 5\*s
+Summary: 
+
+	Syn = C' + 5\*((P-1)\*|V|/bandwith) + 5\*s
 
 
-	 Asyn = C + ((|V|/2 + |V|)\*5/overlap ratio)\*(2\*|E|/|V|) + |V|/atomic overlap ratio\*t
+	Asyn = C + ((|V|/2 + |V|)\*5/overlap ratio)\*(2\*|E|/|V|) + |V|/atomic overlap ratio\*t
 
 I think let's run simulations.
 
