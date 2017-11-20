@@ -413,15 +413,35 @@ Define a graph G(V,E) where V is all the nodes in the graph G and E is all the e
 
 ### Communication volumn of Soman CC
 
-In Soman CC, let's suppose edges and nodes are evenly distributed on P processors, and at least one end of the edge is on the processor who owns that edge. S iterations are required to finding all connected components. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border of each partition exchange information (connected component ID). In the worst case, every nodes of the graph is on the partition borders. For every partition, there are (P-1)/P\*|V| nodes information transferred to other partitions, thus the communication volumn is (P-1)\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? A good feature about Soman CC is that we know S is well bounded by 5, a small constant. 
+In Soman CC, let's suppose edges and nodes are distributed on P processors, and at least one end of the edge is on the processor who owns that edge. S iterations are required to finding all connected components. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border of each partition exchange information (connected component ID). In the worst case, each partition need to communicate with all nodes who don't reside in that partition, thus the communication volumn is (P-1)\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? A good feature about Soman CC is that we know S is bounded by log|V|, usually a small constant (log1000000000=18). In empirical experiments, S is between 2 to 5. 
+
+Assumption: 
+
+1) worst case, each partition need to communicate with all nodes on other partition.
+
+2) S is small constant, say 5
+
+communication volumn: O((P-1)|V|)
+
+time for communication: Max( 5\*latency, 5(P-1)|V|/bandwith\*latency )
 
 ### Communication volumn of Adaptive CC
 
-In Adaptive CC, all edges |E| are tring to hook and each hook operation may result in a traversal across partitions because the higher Id node will traverse back to the root and hook it with the lower ID node, which also ensure the resulting tree couldn't be very high. So in the worst case, every hook operation results a traversal in multiple partition. From MST, the depth of the tree is bounded by log\*|V| which is less than 5. So number of partitons traversed is bounded by log\*|V|. Total communication volumn for hooking is |E|log\*|V| < 5|E|. 
+In Adaptive CC, all edges |E| are tring to hook and each hook operation may result in a traversal across partitions because either end of the edge will traverse back to root and hook with the lower-than-root-ID node along the parent path of the other end of that edge, which also makes the resulting tree couldn't be very high. So in the worst case, every hook operation results a traversal in multiple partition. Here we assume, each hooking will hook the lowers tree to the higher tree. Then from MST, the depth of the tree is bounded by log\*|V| which is less than 5. So number of partitons traversed is bounded by log\*|V|. Total communication volumn for hooking is |E|log\*|V| < 5|E|. 
 
 Same story applies to multiple pointer jumping, each node try to do pointer jumping and in the worst case, every pointer jumping results in a traveral in log\*|V| partition. So the total communication volumn for pointer jumping is |V|log\*|V| < 5|V|. Total communication volume is bounded by O(|E|+|V|).
 
-An interesting thing is, in actual implementation, the edges are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, either end of the edge will traverse back to root and hook with the lower-than-root-ID node along the parent path of the other end of that edge. So in the most idea case, those |V|/2 hooks don't traverse cross any partitions. So for each segments, there is no communication cost. In the worst case, each edge traverses 5 partitions, however they can be overlapped by each other somehow. Then if they are perfectly overlapped, the time used for communication is only 5\*communication_time_cross_partition, even though the communication volum is still 2.5|V|(e.g. 5\*|V|/2). 2\*|E|/|V| of those communications has to be in sequence. It is interesting to estimiate how much of the communication can be overlapped. Comparing to the Soman CC, there is (P-1)\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is (P-1)\*|V|/g which g is bandwidth. 
+An interesting thing is, in actual implementation, the edges are divided into 2|E|/|V| segments. Then in each segment, there are |V|/2 edges trying to hook, either end of the edge will traverse back to root and hook with the lower-than-root-ID node along the parent path of the other end of that edge. So in the most idea case, those |V|/2 hooks don't traverse cross any partitions. So for each segments, there is no communication cost. In the worst case, each edge traverses 5 partitions, however they can be overlapped by each other somehow. We define OM is amount of messages can be sent at the same time. Also we assume, each communication happens in a batch style, OM amount of messages are sent simultaneously and each OM messages are sent follow by follow. Then if they are perfectly overlapped, they happens at the same time and can be sent once, then OM is 5\*|V|/2, the time used for communication is only (5\*|V|/2)/bandwith\*lantency, even though the communication volum is still 2.5|V|(e.g. 5\*|V|/2). 2\*|E|/|V| of those communications has to be in sequence. It is interesting to estimiate how much of the communication can be overlapped. Comparing to the Soman CC, there is (P-1)\*|V| volumn of communication between each iteration, but they can be transferred once, so the time for communication is (P-1)\*|V|/bandwith\*latency. 
+
+Assumption:
+
+1) Hooking process always hooks the shoter tree to taller tree. Then depth of the tree resulting from hooking is bounded by log\*|V|
+
+2) We define OM is the amount of messages can be sent simultaneously and each OM amount of messages are sent one by one untill all the messages are sent. 
+
+communication volumn: O(|V|+|E|)
+
+time for communication: Max(3.5\*|V|/OM\*latency\*2\*|E|/|V|, 3.5\*|V|/bandwidth\*latency\*2\*|E|/|V| ). When OM < bandwidth, we take the formal one. When OM > bandwidth, we take later one.
 
 ### Cost of Async and Sync
 
@@ -431,19 +451,19 @@ Sync = C' + M' + SC, where C' is computation cost, M' is communication cost, and
 
 C' < C, C is O(E) and C' is O(|E|\*S), S is constant from experiment experience. 
 
-M and M' is hard to compare, 1) for Soman, M' = (((P-1)\*|V|)/bandwith)\*5. Say P is 11, then if bandwith is larger, M' is not significant and well bounded by O(|V|). 2) for adaptive CC, M = (((|V|/2+|V|)\*5)/overlap ratio)\*(2\*|E|/|V|), only this portion: (((|V|/2+|V|)\*5)/overlap ratio) can be overlaped. If the overlap ratio is |V|, then this portion is a small constant less then 5, then M is well bounded by O(|E|/|V|).  Since the graph is scale-free, then |E| < |V|^2 and the communication under the condition that overlap ratio is |V| is less than Soman's or Sync's. However we don't know how much of the work can overlap.  
+M and M' is hard to compare, 1) for Soman, M' = 5(P-1)|V|/bandwith\*latency. Say P is 11, then if bandwith is larger, M' is not significant. Anyway, M'is well bounded by O(|V|). 2) for adaptive CC, M = (3.5\*|V|/OM\*latency)\*2\*|E|/|V|. If OM (overlap amount) is |V|, then M is well bounded by O(|E|/|V|).  Since the graph is scale-free, then |E| < |V|^2 and the communication under the condition that overlap ratio is |V| is less than Soman's or Sync's. However we don't know how much of the work can overlap.  
 
-AT = |V|/ratio of overlapped atomic operation * t, where t is the time to finish an atomic operation. In adaptive CC, in each segment, there are |V|/2 hookings working on |V| memory space. Then if the ratio of overlapped atomic operation is |V|, AT is just a small constant times t. 
-SC = S * s, where s is the time cost for synchronization. We know S is less 5. 
+AT = |V|/amount of overlapped atomic operation * t, where t is the time to finish an atomic operation. In adaptive CC, in each segment, there are |V|/2 hookings working on |V| memory space. Then if the ratio of overlapped atomic operation is |V|, AT is just t. 
+SC = S * s, where s is the time cost for synchronization. We assume S is less 5. 
 
 AT and SC are also hard to compare, since we can only say s and t are some constant. How many unoverlapped atomic operation, actually, the unoverlapped atomic operation can be sum of degree of all nodes in the worst case. But I don't think it happens often. Actually I don't think it can be so unlucky. 
 
 Summary: 
 
-	Syn = C' + 5\*((P-1)\*|V|/bandwith) + 5\*s
+	Syn = C' + 5\*((P-1)\*|V|/bandwith\*lantency) + 5\*s
 
 
-	Asyn = C + ((|V|/2 + |V|)\*5/overlap ratio)\*(2\*|E|/|V|) + |V|/atomic overlap ratio\*t
+	Asyn = C + Max( 3.5\*|V|/OM\*lantency\*2\*|E|/|V|, 3.5\*|V|/bandwidth\*latency\*2\*|E|/|V|) + |V|/amount of overlap atomic operations\*t
 
 I think let's run simulations.
 
