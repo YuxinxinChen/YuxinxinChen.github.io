@@ -413,17 +413,17 @@ Define a graph G(V,E) where V is all the nodes in the graph G and E is all the e
 
 ### Communication volumn of Soman CC
 
-In Soman CC, let's suppose edges and nodes are distributed on P processors, and at least one end of the edge is on the processor who owns that edge. S iterations are required to finding all connected components. In each iteration, each edge tries to hook, then each node does muli-pointer-jumping. Before next iteration, the nodes on the border of each partition exchange information (connected component ID). In the worst case, each partition need to communicate with all nodes who don't reside in that partition, thus the communication volumn is (P-1)\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? A good feature about Soman CC is that we know S is bounded by log|V|, usually a small constant (log1000000000=18). In empirical experiments, S is between 2 to 5. 
+In Soman CC, let's suppose edges and nodes are distributed on P processors, and at least one end of the edge is on the processor who owns that edge. S iterations are required to finding all connected components. In each iteration, each edge tries to hook, then each node does multi-pointer-jumping. Before next iteration, the nodes on the border of each partition exchange information (connected component ID). In the worst case, each partition need to communicate with all nodes who don't reside in that partition, thus the communication volumn is (P-1)\*|V|\*S in total. Usually only the nodes on the border of each partition need communication, but how to estimate the size of border at random partition case? A good feature about Soman CC is that we know S is that it is log|V| generally, usually a small constant (log1000000000=18). In empirical experiments, S is between 2 to 5. 
 
 Assumption: 
 
-1) worst case, each partition need to communicate with all nodes on other partition.
+	1) worst case, each partition need to communicate with all nodes on other partition.
 
-2) S is small constant, say 5
+	2) S is small constant, say 5
 
-communication volumn: O((P-1)|V|)
+		communication volumn: O((P-1)|V|)
 
-time for communication: Max( 5\*latency, 5(P-1)|V|/bandwith\*latency )
+		time for communication: Max( 5\*latency, 5(P-1)|V|/bandwith\*latency )
 
 ### Communication volumn of Adaptive CC
 
