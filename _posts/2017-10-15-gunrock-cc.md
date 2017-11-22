@@ -461,12 +461,14 @@ Sync = C' + M' + SC, where C' is computation cost, M' is communication cost, and
 
 C' < C, C is O(E) and C' is O(|E|\*S), S is constant from experiment experience. 
 
-M and M' is hard to compare, 1) for Soman, M' = 5(P-1)|V|/bandwith\*latency. Say P is 11, then if bandwith is larger, M' is not significant. Anyway, M'is well bounded by O(|V|). 2) for adaptive CC, M = (3.5\*|V|/OM\*latency)\*2\*|E|/|V|. If OM (overlap amount) is |V|, then M is well bounded by O(|E|/|V|).  Since the graph is scale-free, then |E| < |V|^2 and the communication under the condition that overlap ratio is |V| is less than Soman's or Sync's. However we don't know how much of the work can overlap.  
+M and M' is hard to compare, 1) for Soman, M' = S(P-1)|V|/bandwith\*latency. Say P is 11, then if bandwith is larger, M' is not significant. Anyway, M'is O(|V|). 2) for adaptive CC, M = (1.5\*|V|P/OM\*latency)\*2\|E|/|V|. If OM (overlap amount) is |V|, then M is O(|E|/|V|).  Since the graph is scale-free, then |E| < |V|^2 and the communication under the condition that overlap ratio is |V|. However we don't know how much of the work can overlap.  
 
-AT = |V|/amount of overlapped atomic operation * t, where t is the time to finish an atomic operation. In adaptive CC, in each segment, there are |V|/2 hookings working on |V| memory space. Then if the ratio of overlapped atomic operation is |V|, AT is just t. 
+AT = |E|/amount of overlapped atomic operation * t, where t is the time to finish an atomic operation. In adaptive CC, in each segment, there are |V|/2 hookings working on |V| memory space. Then if the ratio of overlapped atomic operation is |V|, AT is 2|E|/|V|\*t. 
 SC = S * s, where s is the time cost for synchronization. We assume S is less 5. 
 
 AT and SC are also hard to compare, since we can only say s and t are some constant. How many unoverlapped atomic operation, actually, the unoverlapped atomic operation can be sum of degree of all nodes in the worst case. But I don't think it happens often. Actually I don't think it can be so unlucky. 
+
+There is another level of overlapping in Async case. Unlike sync CC, the boundary of computation, communication and synchronization are clear. computation, communicaiton and atomic operations are overlapped to each other, then may shrink the overall runtime. However, the amount of the overlap is unknown.
 
 Summary: 
 
