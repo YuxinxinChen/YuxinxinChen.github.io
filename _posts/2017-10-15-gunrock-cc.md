@@ -435,13 +435,19 @@ An interesting thing is, in actual implementation, the edges are divided into 2|
 
 Assumption:
 
-1) Hooking process always hooks the shoter tree to taller tree. Then depth of the tree resulting from hooking is bounded by log\*|V|
+	1) Hooking process always hooks the shoter tree to taller tree. Then depth of the tree resulting from hooking is bounded by log\*|V|
 
-2) We define OM is the amount of messages can be sent simultaneously and each OM amount of messages are sent one by one untill all the messages are sent. 
+	2) We define OM is the amount of messages can be sent simultaneously and each OM amount of messages are sent one by one untill all the messages are sent. 
 
-communication volumn: O(|V|+|E|)
+		communication volumn: O(|V|+|E|)
 
-time for communication: Max(3.5\*|V|/OM\*latency\*2\*|E|/|V|, 3.5\*|V|/bandwidth\*latency\*2\*|E|/|V| ). When OM < bandwidth, we take the formal one. When OM > bandwidth, we take later one.
+		time for communication: Max(7.5*|V|/OM*latency*2*|E|/|V|, 7.5*|V|/bandwidth*latency*2*|E|/|V| ). When OM < bandwidth, we take the formal one. When OM > bandwidth, we take later one.
+
+	3) If we assume the traversal resulted from hooking and pointer jumping will cross O(P) partitions:
+
+	communication volumn: O(P(|V|+|E|))
+
+	time for communication: Max(1.5|V|P/OM*latency*2|E|/|V|, 1.5|V|P/bandwidth*latency*2|E|/|V|). When OM < bandwidth, we take the formal one. When OM > bandwidth, we take the later one.
 
 ### Cost of Async and Sync
 
@@ -460,10 +466,10 @@ AT and SC are also hard to compare, since we can only say s and t are some const
 
 Summary: 
 
-	Syn = C' + 5\*((P-1)\*|V|/bandwith\*lantency) + 5\*s
+	Syn = S*C + S*((P-1)|V|/bandwith*lantency) + S*s
 
 
-	Asyn = C + Max( 3.5\*|V|/OM\*lantency\*2\*|E|/|V|, 3.5\*|V|/bandwidth\*latency\*2\*|E|/|V|) + |V|/amount of overlap atomic operations\*t
+	Asyn = C + Max( 1.5|V|P/OM*lantency*2|E|/|V|, 1.5|V|P/bandwidth*latency*2|E|/|V|) + |E|/amount of overlap atomic operations*t
 
 I think let's run simulations.
 
