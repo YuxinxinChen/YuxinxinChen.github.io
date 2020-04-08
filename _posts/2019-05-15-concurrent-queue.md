@@ -1,22 +1,23 @@
 
 layout: post
-title: "Notes on GPU"
-data: 2017-12-10
-tags: [reading notes, NIC, GPU]
+title: "Concurrent Queue"
+data: 2019-05-15
+tags: [reading notes, Queue, GPU]
 comments: true
 share: false
 ---
 
-Generally speaking, making GPU comminicate with remote CPU/GPU via networking, we should consider two important aspects and how they are done in current state of art: 
-1. Data movement
-2. Control path
+This queue is motivited by GPU graph algorithm. Normally most graph algorithm can be mapped to a queue structure. Similar idea is to keep a frontier which only contains the active vertices. Esscentially this frontier is a queue and GPU threads are collectively process the elements in this queue in a synchronized style. Now we want to make it more asynchronized by removing the synchronization after each graph primitive (such as advance, filter) and let the threads go independently. The key structure to achieve this is a concurrent queue. Take page rank as example, the queue will be initialized with enqueue all the vertices into the queue. Each GPU threads will take an different work item from the queue, update its rank and propogate its residule to its neighbors by atomic adding residule to its neighbor's residule and enqueu its neighbor into the queue. In this case, each thread is both a consumer (take an work item and update rank) and a producer (enqueue its neighbor's vertices into the queue). Under this framework, we can see this queue has multiple producers and multiple consumer and they are run independently and asynchronously. 
 
-So when we ask the GPU commincate, or more specifically sending or recieveing data to or from remote nodes, we first need to tell the HCA to send or receive data and where is the send data if it is send, when to send the data. We need to know if the data arrive if it is recieve. When we say: send!. The data is send from GPU to NIC. From this process, there are two path: control path which set everything up and prepare the buttom you can press to send the data; the actual data movement which the data movement is happening.
+Then I simplfy this to: a concurrent queue having multiple producers and multiple consumers. Producers and consumers, they are different threads for now.
 
-In the following reviews, all of them, the data movement happens directly from NIC and GPU, bypassing the copy from GPU to CPU and from CPU to NIC due to the use of GPUDirect RDMA (expose GPU memory region to be directly accessible on the PCIe bus via a BAR window). However, some of them also offload the control path to GPU, some of them ask CPU to set up everything and GPU to press send buttom, some of them put the control path all on CPU side.
+## Queue basic
+Since it is a queue, I will have a counter `start` and a counter: `end`, items between `start` and `end` are valid. The `end` should be larger or equal to `start` all the time.
 
-## GPUrdma
-GPUrdma is a GPU-side library for performing remote direct memory access across network directly from GPU kernel, completely bypassing CPU, pusing both data and control on GPU. 
+### Producers 
+Normally we assume we couldn't predict when and who will insert and for multiple producer, otherwise we would just ask them to write into an array based their index. We don't want their insertion be overwritten by other producers and idealy their insertion should be compact in terms of memory (there shouldn't be gap between start of the queue and end of the queue in the cases like graph algorithms).   
+
+To enable multiple producers to insert the queue, we introduce another three counters: `end_alloc`, `end_max`, `end_count`. 
 ### GPUDirect RDMA
 From Kepler, GPUDirect RDMA relies on the standard PCIe capabilities to perform peer-to-peer DMA across PCIe devices without CPU involvement. For example, one GPU may read from the memory of another GPU over PCIe, as long as the memory-mapped I/O region exposing the memory of the first is mapped into the address sapce of the second. These capabilities, combined with the GPUDirect RDMA API for GPU memory translations and mappings, enable any PCIe device to access GPU memory in the same way it accesses the CPU memory. 
 ### Infiniband and HCA
