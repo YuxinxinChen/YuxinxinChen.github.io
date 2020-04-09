@@ -19,11 +19,13 @@ Let's define our first configuration of BFSCTA:
    * **F2**: Fetch size of secondly launched kernel,
    * **X**: Number of blocks of first launched kernel with configuration (B1, F1),
    * **Y**: Number of blocks of second launched kernel with configuratoin (B2, F2)
+
 We need **X** **B1**-size blocks and **Y** **B2**-size blocks all reside on GPU and max the GPU occupancy. 
 
 Inside the kernel (BFSCTA ), I have two lines of code:
    1. push low priority work to low priority queue (**l**ocal)
    2. push communication to communication queue (**r**emote)  
+
 In the following experiments, `none` indicates we comment out both code 1 and 2, `l` indicates we comment out only code 2, `r` indicates we comment out only code 1. You could think in the way we have three different kernel each has different register and shared memory usage. 
 
 We will fix **B2**, **F1** **F2** and **X** and see how **Y** changes as **B1** changes in three cases: `none`, `l`, `r`. 
