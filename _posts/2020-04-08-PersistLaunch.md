@@ -40,6 +40,6 @@ I summarize the unexpected observations below:
 
 ![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/sms.png)
 
-In contrast, the yellow cells exhibit expected behavior, and the **Y** values are in line with my calcuations (when register usage is 48, a SM can take 2 512-block and 1 256-block, and when register usage is 64, a SM can only take 2 512-block or 1 256-block plus 1 512-block) as the following Figure shows (**B1** = 256, **X**=2, `r`).
+In contrast, the yellow cells exhibit expected behavior, and the **Y** values are in line with my calcuations (when register usage is 48, a SM can take 2 512-block and 1 256-block, and when register usage is 64, a SM can only take 2 512-block or 1 256-block plus 1 512-block) as the following Figure shows (**B1** = 256, **X**=20, `r`).
 
 ![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/sms2.png)
