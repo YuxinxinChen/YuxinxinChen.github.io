@@ -43,3 +43,5 @@ I summarize the unexpected observations below:
 In contrast, the yellow cells exhibit expected behavior, and the **Y** values are in line with my calcuations (when register usage is 48, a SM can take 2 512-block and 1 256-block, and when register usage is 64, a SM can only take 2 512-block or 1 256-block plus 1 512-block) as the following Figure shows (**B1** = 256, **X**=20, `r`).
 
 ![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/sms2.png)
+
+This unspecific, non-guaranteed behavior of scheduler is a serious problem when multiple persistent kernels are used. To support multiple persistent kernels, NVIDIA should give programer some guarantee to program with. And it is totally fine if this guarantee varies from architecture to architecture.
