@@ -75,9 +75,18 @@ If we plot the time on y-axis, stride size on x-axis, we get this plot:
 
 To understand what is going on, let's visualize several cases:
 When stride is 32, we got the one of the worst performance. If we visualize it:
-|**0**|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|
-|-----|-|-|-|-|-|-|-|-|-|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
-|**32**|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|
-|-----|-|-|-|-|-|-|-|-|-|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_32.png)
+As shown in the above visualization, all 32 threads access the same bank, resulting 32 serialized access
 
+For stride 16, we visualize it:
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_16.png)
+As shown in the above visualization, 16 threads access the bank 0, the other 16 threads access the bank 16, resulting 16 serialized access time step
+
+For stride 5, we visualize it:
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_5.png)
+As shown in the above visualization, all 32 threads access different banks, thus no bank conflict 
+
+For stride 1, we visualize it:
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_1.png)
+As shown in the above visualization, all 32 threads access different banks, thus no bank conflict 
 
