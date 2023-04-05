@@ -27,6 +27,48 @@ There is **no** bank conflict if:
 - Several threads access differnt bytes of the same 4-byte word
 - Several threads access different banks
 
+## Lab Section: Memory bank Conflict
+### First Experiment
+We could test the memory bank conflict by access the shared memory with different stride and measure the time:
+```
+template<int N>
+__global__ void test1(int stride, float *out)
+{
+    long long int start = 0, stop = 0;
+    double time, usec;
+    __shared__ float shareM[N];
+    for(int i=threadIdx.x; i<N; i+=blockDim.x)
+        shareM[i] = i;
 
+    __syncthreads();
+    start = clock64();
 
+    for(int i=0; i<10; i++)
+    {
+        float item = shareM[(threadIdx.x*stride)];
+        item++;
+        shareM[(threadIdx.x*stride)] = item;
+        __syncthreads();
+    }
 
+    stop = clock64();
+    if(!threadIdx.x && !blockIdx.x) {
+        time = (stop-start);
+        usec = time*1000/clockrate;
+        //printf("time in usec: %.2f \n", usec);
+        printf("%.2f\n", usec);
+    }
+
+    for(int i=threadIdx.x; i<N; i+=blockDim.x)
+        out[i] = shareM[i];
+}
+```
+We ran the above code with different stride and measure the time:
+```
+for(int stride = 64; stride > 0; stride--) {
+    test1<N><<<1, 32>>>(stride, out);
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
+```
+If we plot the time on y-axis, stride size on x-axis, we get this plot:
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_time.png)
