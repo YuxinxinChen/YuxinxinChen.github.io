@@ -69,3 +69,56 @@ add_executable(my_executable main.cpp)
 target_link_libraries(my_executable PRIVATE ${MPI_LIBRARY})
 
 ```
+
+### Pass GPU pointer between C++ extensions
+
+To return a GPU memory pointer from a C++ extension and pass it to another C++ extension function in PyTorch, you can follow these steps:
+
+1. Create a C++ extension function that returns a GPU memory pointer:
+```
+#include <torch/extension.h>
+
+uintptr_t get_gpu_pointer(torch::Tensor tensor) {
+    return reinterpret_cast<uintptr_t>(tensor.data_ptr());
+}
+
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("get_gpu_pointer", &get_gpu_pointer, "Get GPU memory pointer");
+}
+
+```
+
+2. Create another C++ extension function that accepts a GPU memory pointer and creates a tensor from it:
+```
+#include <torch/extension.h>
+
+torch::Tensor create_from_gpu_pointer(uintptr_t ptr, torch::IntArrayRef sizes, torch::ScalarType dtype, int device_id) {
+    auto* data_ptr = reinterpret_cast<void*>(ptr);
+    auto options = torch::TensorOptions().dtype(dtype).device(torch::kCUDA, device_id);
+    return torch::from_blob(data_ptr, sizes, options);
+}
+
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("create_from_gpu_pointer", &create_from_gpu_pointer, "Create tensor from GPU memory pointer");
+}
+```
+3. In your Python code, import both extension modules and use the functions:
+```
+import torch
+import get_pointer_ext
+import create_tensor_ext
+
+# Create a tensor on GPU
+tensor = torch.randn(2, 3).cuda()
+
+# Get the GPU memory pointer
+ptr = get_pointer_ext.get_gpu_pointer(tensor)
+
+# Pass the GPU memory pointer to another extension function
+device_id = tensor.device.index
+new_tensor = create_tensor_ext.create_from_gpu_pointer(ptr, tensor.shape, tensor.dtype, device_id)
+
+# Verify that the new tensor is the same as the original tensor
+print(torch.allclose(tensor, new_tensor))
+
+```
