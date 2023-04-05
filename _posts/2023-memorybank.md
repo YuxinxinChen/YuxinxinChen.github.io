@@ -16,7 +16,7 @@ Mapping addresses to banks:
   - 8B word spans two successive banks
 
 Logical View of SMEM Banks:
-![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/master/images/membank.png)
+![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/membank.png)
 
 
 ## Bank Conflict
