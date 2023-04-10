@@ -90,3 +90,205 @@ For stride 1, we visualize it:
 ![](https://github.com/YuxinxinChen/YuxinxinChen.github.io/blob/new_home_page/images/stride_1.png)
 As shown in the above visualization, all 32 threads access different banks, thus no bank conflict 
 
+## Lab Section: Shared Memory Allocation Pattern
+There are two ways of allocating shared memory:
+- Static allocation by `__shared__ int a[3]` where the size of shared memory is a static value
+- Dynamic allocation by `extern __shared__ int a[]` where the sizeof of dynamic shared memory is passed from kernel invokation by bytes.
+
+To study the allocation pattern when both static and dynamic allocation are used, we run following code with differnt `N`:
+```
+template<int N>
+__global__ void test2()
+{
+    __shared__ float sharedM1[1];
+    __shared__ float sharedM2[1];
+
+    extern __shared__ float externSpace[];
+
+    __shared__ float sharedM3[N];
+
+    if(threadIdx.x == 0)
+    {
+        printf("sharedM1 %p\n", sharedM1);
+        printf("sharedM2 %p\n", sharedM2);
+        printf("externSpace %p\n", externSpace);
+        printf("sharedM3 %p\n", sharedM3);
+        int n = (externSpace-sharedM1);
+        printf("extern-sharedM1 %d\n", n);
+        printf("static shared: %d\n", 1+1+N);
+    }
+}
+```
+We run the code with different `N`:
+```
+test2<1><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 1);
+    test2<2><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 2);
+    test2<3><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 3);
+    test2<4><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 4);
+    test2<5><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 5);
+    test2<6><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 6);
+    test2<7><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 7);
+    test2<8><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 8);
+    test2<9><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 9);
+    test2<10><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 10);
+    test2<11><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 11);
+    test2<12><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 12);
+    test2<13><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 13);
+    test2<14><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 14);
+    test2<15><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 15);
+    test2<16><<<1,32, 7*sizeof(float)>>>();
+    CUDA_CHECK(cudaDeviceSynchronize());
+    printf("----------N: %d-------------\n", 16);
+``` 
+
+We got the results:
+```
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000010
+sharedM3 0x7f1a80000008
+extern-sharedM1 4
+static shared: 3
+----------N: 1-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000010
+sharedM3 0x7f1a80000008
+extern-sharedM1 4
+static shared: 4
+----------N: 2-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000020
+sharedM3 0x7f1a80000008
+extern-sharedM1 8
+static shared: 5
+----------N: 3-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000020
+sharedM3 0x7f1a80000008
+extern-sharedM1 8
+static shared: 6
+----------N: 4-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000020
+sharedM3 0x7f1a80000008
+extern-sharedM1 8
+static shared: 7
+----------N: 5-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000020
+sharedM3 0x7f1a80000008
+extern-sharedM1 8
+static shared: 8
+----------N: 6-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000030
+sharedM3 0x7f1a80000008
+extern-sharedM1 12
+static shared: 9
+----------N: 7-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000030
+sharedM3 0x7f1a80000008
+extern-sharedM1 12
+static shared: 10
+----------N: 8-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000030
+sharedM3 0x7f1a80000008
+extern-sharedM1 12
+static shared: 11
+----------N: 9-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000030
+sharedM3 0x7f1a80000008
+extern-sharedM1 12
+static shared: 12
+----------N: 10-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000040
+sharedM3 0x7f1a80000008
+extern-sharedM1 16
+static shared: 13
+----------N: 11-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000040
+sharedM3 0x7f1a80000008
+extern-sharedM1 16
+static shared: 14
+----------N: 12-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000040
+sharedM3 0x7f1a80000008
+extern-sharedM1 16
+static shared: 15
+----------N: 13-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000040
+sharedM3 0x7f1a80000008
+extern-sharedM1 16
+static shared: 16
+----------N: 14-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000050
+sharedM3 0x7f1a80000008
+extern-sharedM1 20
+static shared: 17
+----------N: 15-------------
+sharedM1 0x7f1a80000000
+sharedM2 0x7f1a80000004
+externSpace 0x7f1a80000050
+sharedM3 0x7f1a80000008
+extern-sharedM1 20
+static shared: 18
+----------N: 16-------------
+```
+
+The first observation is that regardless of where static shared memory allocation is called, the static shared memory are allocated aggregately in a big chunk. There is no padding in between and allocated continuesly. The static shared memory are always allocated before dynamic shared memory.
+
+The second abservation is that dynamic shared memory are allocated in multiple of 16 bytes. 
+
+Based on this pattern, it is easy for us to reason about shared memory bank conflict when multiple types of shared memory are used.
