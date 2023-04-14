@@ -26,20 +26,20 @@ if(WARPLANE < 2)
 ```
 We got:
 ```
-==PROF== Disconnected from process 2122618
-[2122618] python3.11@127.0.0.1
+==PROF== Disconnected from process 2279672
+[2279672] python3.11@127.0.0.1
   test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
     Section: Command line profiler metrics
     --------------------------------------------------- ------------ ------------
     Metric Name                                          Metric Unit Metric Value
     --------------------------------------------------- ------------ ------------
-    dram__bytes_read.sum                                       Kbyte         1.02
-    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.00
-    dram__bytes_read.sum.per_second                     Mbyte/second        10.26
+    dram__bytes_read.sum                                        byte          192
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        57.14
     dram__bytes_write.sum                                       byte            0
     dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
     dram__bytes_write.sum.per_second                     byte/second            0
-    dram__sectors_read.sum                                    sector           32
+    dram__sectors_read.sum                                    sector            6
     dram__sectors_write.sum                                   sector            0
     memory_l1_tag_requests_global                            sectors            1
     memory_l2_theoretical_sectors_global                     sectors            1
@@ -54,26 +54,55 @@ if(WARPLANE < 4)
 ```
 We got:
 ```
-==PROF== Disconnected from process 2113630
-[2113630] python3.11@127.0.0.1
+==PROF== Disconnected from process 2290926
+[2290926] python3.11@127.0.0.1
   test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
     Section: Command line profiler metrics
     --------------------------------------------------- ------------ ------------
     Metric Name                                          Metric Unit Metric Value
     --------------------------------------------------- ------------ ------------
-    dram__bytes_read.sum                                       Kbyte         1.02
-    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.00
-    dram__bytes_read.sum.per_second                     Mbyte/second        10.33
+    dram__bytes_read.sum                                        byte          192
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        55.05
     dram__bytes_write.sum                                       byte            0
     dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
     dram__bytes_write.sum.per_second                     byte/second            0
-    dram__sectors_read.sum                                    sector           32
+    dram__sectors_read.sum                                    sector            6
     dram__sectors_write.sum                                   sector            0
     memory_l1_tag_requests_global                            sectors            1
     memory_l2_theoretical_sectors_global                     sectors            2
     memory_l2_theoretical_sectors_global_ideal               sectors            2
     --------------------------------------------------- ------------ ------------
 ```
+
+```
+__shared__ float4 shared[32];
+if(WARPLANE < 6)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE];
+```
+We got:
+```
+==PROF== Disconnected from process 2295888
+[2295888] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          256
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        71.43
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector            8
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors            1
+    memory_l2_theoretical_sectors_global                     sectors            3
+    memory_l2_theoretical_sectors_global_ideal               sectors            3
+    --------------------------------------------------- ------------ ------------
+```
+
 ```
 __shared__ float4 shared[32];
 if(WARPLANE < 8)
@@ -81,20 +110,20 @@ if(WARPLANE < 8)
 ```
 We got:
 ```
-==PROF== Disconnected from process 2104219
-[2104219] python3.11@127.0.0.1
+==PROF== Disconnected from process 2298305
+[2298305] python3.11@127.0.0.1
   test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
     Section: Command line profiler metrics
     --------------------------------------------------- ------------ ------------
     Metric Name                                          Metric Unit Metric Value
     --------------------------------------------------- ------------ ------------
-    dram__bytes_read.sum                                       Kbyte         1.09
-    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.00
-    dram__bytes_read.sum.per_second                     Mbyte/second        10.01
+    dram__bytes_read.sum                                        byte          256
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        75.47
     dram__bytes_write.sum                                       byte            0
     dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
     dram__bytes_write.sum.per_second                     byte/second            0
-    dram__sectors_read.sum                                    sector           34
+    dram__sectors_read.sum                                    sector            8
     dram__sectors_write.sum                                   sector            0
     memory_l1_tag_requests_global                            sectors            1
     memory_l2_theoretical_sectors_global                     sectors            4
@@ -145,4 +174,18 @@ dram__bytes_write.sum.per_second
 dram__sectors_read.sum                           
 dram__sectors_write.sum                         
 ```
+The `memory_l1_tag_requests_global` and `dram__sectors_read.sum` metrics do not necessarily have to match because they represent different stages of the memory hierarchy:
+1. `memory_l1_tag_requests_global`: This metric represents the number of L1 cache requests for global memory. It indicates how many times your kernel tried to access global memory through L1 cache.
+
+2. `dram__sectors_read.sum`: This metric represents the total number of DRAM sectors read during the kernel execution. It indicates how much data is actually read from the DRAM.
+
+The discrepancy between these two metrics can arise due to various factors:
+1. Caching mechanisms: When a memory request is made, the L1 cache is first checked. If the requested data is not in the cache, a cache miss occurs, and the data is fetched from DRAM. The memory_l1_tag_requests_global metric counts the total number of sectors requested from global memory, but some of these requests may be served by the cache without accessing DRAM. This can lead to fewer DRAM sectors being read than L1 cache requests.In the case of cache misses (or evictions): the requested data is not found in the L1 cache, the request will be forwarded to the L2 cache or eventually to the DRAM. This means that even though there might be fewer L1 cache requests, more DRAM sectors could be accessed due to cache misses.
+
+2. Memory access patterns: Non-coalesced or non-contiguous memory access patterns can result in inefficient memory utilization. This can cause higher L1 cache requests compared to DRAM sectors read, as multiple threads may request the same data from DRAM but have different L1 cache requests.
+
+3. Memory coalescing: The GPU hardware tries to coalesce memory accesses, combining multiple requests into a single memory transaction to improve efficiency. This can lead to a lower number of DRAM sectors read than L1 cache requests, as multiple requests are combined into a single DRAM transaction.
+
+4. Other Memory Requests: The dram__sectors_read.sum metric measures the total number of sectors read from DRAM, which can include memory requests not related to the L1 cache, such as local memory accesses, constant memory accesses, or texture memory accesses.
+
 Those metrics are more straightforward and their example can be seen above
