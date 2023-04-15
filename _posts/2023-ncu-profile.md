@@ -160,6 +160,88 @@ Now we profile the code which loads 4 cachelines, we got:
 ```
 The profile results show that we issue 4 transaction requests and those 4 requests load 16 sectors from the DRAM and it is the most efficient way of loading.
 
+However, when each thread in a warp access to global memory in different cacheline, the `memory_l1_tag_requests_global` becomes bit of hard to interpret. For example:
+```
+if(WARPLANE < 1)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE];
+``
+we got:
+```
+==PROF== Disconnected from process 2375521
+[2375521] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          192
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        57.14
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector            6
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors            1
+    memory_l2_theoretical_sectors_global                     sectors            1
+    memory_l2_theoretical_sectors_global_ideal               sectors            1
+    --------------------------------------------------- ------------ ------------
+```
+
+```
+if(WARPLANE < 2)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE*8];
+```
+we got:
+```
+==PROF== Disconnected from process 2378606
+[2378606] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          256
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        75.47
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector            8
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors           62
+    memory_l2_theoretical_sectors_global                     sectors            2
+    memory_l2_theoretical_sectors_global_ideal               sectors            1
+    --------------------------------------------------- ------------ ------------
+```
+
+```
+if(WARPLANE < 4)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE*8];
+``
+we got:
+```
+==PROF== Disconnected from process 2362688
+[2362688] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          384
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.02
+    dram__bytes_read.sum.per_second                     Mbyte/second       111.11
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector           12
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors          116
+    memory_l2_theoretical_sectors_global                     sectors            4
+    memory_l2_theoretical_sectors_global_ideal               sectors            1
+    --------------------------------------------------- ------------ ------------
+``
+From above results, the `dram__sectors_read.sum` makes more sense: adding one more acces in different cacheline, adding 2 more sectors loaded. However, the `memory_l1_tag_requests_global` is more confussing that why the requests increase dramatically for no explicit reasons. 
 Another useful metric is:
 - group:memory__dram_table
 It includes 8 metrices:
