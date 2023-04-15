@@ -164,7 +164,7 @@ However, when each thread in a warp access to global memory in different cacheli
 ```
 if(WARPLANE < 1)
    shared[WARPLANE] = ((float4 *)ptr)[WARPLANE];
-``
+```
 we got:
 ```
 ==PROF== Disconnected from process 2375521
@@ -218,7 +218,7 @@ we got:
 ```
 if(WARPLANE < 4)
    shared[WARPLANE] = ((float4 *)ptr)[WARPLANE*8];
-``
+```
 we got:
 ```
 ==PROF== Disconnected from process 2362688
