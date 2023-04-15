@@ -214,6 +214,33 @@ we got:
     memory_l2_theoretical_sectors_global_ideal               sectors            1
     --------------------------------------------------- ------------ ------------
 ```
+```
+if(WARPLANE < 3)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE*8];
+```
+```
+==PROF== Profiling "test_cta_pip_kernel": 0%....50%....100% - 4 passes
+exit python file
+==PROF== Disconnected from process 2382811
+[2382811] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          320
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.01
+    dram__bytes_read.sum.per_second                     Mbyte/second        94.34
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector           10
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors            3
+    memory_l2_theoretical_sectors_global                     sectors            3
+    memory_l2_theoretical_sectors_global_ideal               sectors            1
+    --------------------------------------------------- ------------ ------------
+```
 
 ```
 if(WARPLANE < 4)
@@ -241,7 +268,34 @@ we got:
     memory_l2_theoretical_sectors_global_ideal               sectors            1
     --------------------------------------------------- ------------ ------------
 ```
-From above results, the `dram__sectors_read.sum` makes more sense: adding one more acces in different cacheline, adding 2 more sectors loaded. However, the `memory_l1_tag_requests_global` is more confussing that why the requests increase dramatically for no explicit reasons. 
+```
+if(WARPLANE < 5)
+   shared[WARPLANE] = ((float4 *)ptr)[WARPLANE*8];
+```
+```
+==PROF== Profiling "test_cta_pip_kernel": 0%....50%....100% - 4 passes
+exit python file
+==PROF== Disconnected from process 2386980
+[2386980] python3.11@127.0.0.1
+  test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
+    Section: Command line profiler metrics
+    --------------------------------------------------- ------------ ------------
+    Metric Name                                          Metric Unit Metric Value
+    --------------------------------------------------- ------------ ------------
+    dram__bytes_read.sum                                        byte          448
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.02
+    dram__bytes_read.sum.per_second                     Mbyte/second       132.08
+    dram__bytes_write.sum                                       byte            0
+    dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
+    dram__bytes_write.sum.per_second                     byte/second            0
+    dram__sectors_read.sum                                    sector           14
+    dram__sectors_write.sum                                   sector            0
+    memory_l1_tag_requests_global                            sectors            5
+    memory_l2_theoretical_sectors_global                     sectors            5
+    memory_l2_theoretical_sectors_global_ideal               sectors            1
+    --------------------------------------------------- ------------ ------------
+```
+From above results, the `dram__sectors_read.sum` makes more sense: adding one more acces in different cacheline, adding 2 more sectors loaded. However, the `memory_l1_tag_requests_global` is more confussing that why the requests increase dramatically when load threads are multiple of two for no explicit reasons. 
 Another useful metric is:
 - group:memory__dram_table
 It includes 8 metrices:
