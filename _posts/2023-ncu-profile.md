@@ -138,26 +138,25 @@ From above 3 experiments, we can observe that
 
 Now we profile the code which loads 4 cachelines, we got:
 ```
-==PROF== Disconnected from process 2131341
-[2131341] python3.11@127.0.0.1
+==PROF== Disconnected from process 2343877
+[2343877] python3.11@127.0.0.1
   test_cta_pip_kernel(at::GenericPackedTensorAccessor<float, (unsigned long)4, at::RestrictPtrTraits, int>, float *, int) (1, 1, 1)x(32, 1, 1), Context 1, Stream 7, Device 0, CC 7.0
     Section: Command line profiler metrics
     --------------------------------------------------- ------------ ------------
     Metric Name                                          Metric Unit Metric Value
     --------------------------------------------------- ------------ ------------
-    dram__bytes_read.sum                                       Kbyte         1.47
-    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.00
-    dram__bytes_read.sum.per_second                     Mbyte/second        14.81
+    dram__bytes_read.sum                                        byte          640
+    dram__bytes_read.sum.pct_of_peak_sustained_elapsed             %         0.03
+    dram__bytes_read.sum.per_second                     Mbyte/second       180.18
     dram__bytes_write.sum                                       byte            0
     dram__bytes_write.sum.pct_of_peak_sustained_elapsed            %            0
     dram__bytes_write.sum.per_second                     byte/second            0
-    dram__sectors_read.sum                                    sector           46
+    dram__sectors_read.sum                                    sector           20
     dram__sectors_write.sum                                   sector            0
     memory_l1_tag_requests_global                            sectors            4
     memory_l2_theoretical_sectors_global                     sectors           16
     memory_l2_theoretical_sectors_global_ideal               sectors           16
     --------------------------------------------------- ------------ ------------
-
 ```
 The profile results show that we issue 4 transaction requests and those 4 requests load 16 sectors from the DRAM and it is the most efficient way of loading.
 
@@ -187,5 +186,7 @@ The discrepancy between these two metrics can arise due to various factors:
 3. Memory coalescing: The GPU hardware tries to coalesce memory accesses, combining multiple requests into a single memory transaction to improve efficiency. This can lead to a lower number of DRAM sectors read than L1 cache requests, as multiple requests are combined into a single DRAM transaction.
 
 4. Other Memory Requests: The dram__sectors_read.sum metric measures the total number of sectors read from DRAM, which can include memory requests not related to the L1 cache, such as local memory accesses, constant memory accesses, or texture memory accesses.
+
+Note: `dram__sectors_read.sum` always load in multiple of two sectors. I haven't seen this number is an odd number.
 
 Those metrics are more straightforward and their example can be seen above
