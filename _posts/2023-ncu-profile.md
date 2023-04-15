@@ -240,7 +240,7 @@ we got:
     memory_l2_theoretical_sectors_global                     sectors            4
     memory_l2_theoretical_sectors_global_ideal               sectors            1
     --------------------------------------------------- ------------ ------------
-``
+```
 From above results, the `dram__sectors_read.sum` makes more sense: adding one more acces in different cacheline, adding 2 more sectors loaded. However, the `memory_l1_tag_requests_global` is more confussing that why the requests increase dramatically for no explicit reasons. 
 Another useful metric is:
 - group:memory__dram_table
