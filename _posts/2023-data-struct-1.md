@@ -86,3 +86,87 @@ In a binary heap, increasing the value at a given index is also `O(1)` for the s
 
 ![](../images/data_struct1.png)
 
+[benchmark code](https://github.com/cirosantilli/linux-kernel-module-cheat/blob/52a203a1e22de00d463be273d47715059344a94b/userland/cpp/bst_vs_heap_vs_hashmap.cpp)
+[plot script](https://github.com/cirosantilli/linux-kernel-module-cheat/blob/52a203a1e22de00d463be273d47715059344a94b/bst-vs-heap-vs-hashmap.gnuplot)
+
+So clearly:
+
+- heap insert time is basically constant.
+
+- We can clearly see dynamic array resize points. Since we are averaging every 10k inserts to be able to see anything at all above system noise, those peaks are in fact about 10k times larger than shown!
+
+- The zoomed graph excludes essentially only the array resize points, and shows that almost all inserts fall under 25 nanoseconds.
+
+- BST is logarithmic. All inserts are much slower than the average heap insert.
+
+#### BST cannot be efficiently implemented on an array
+Heap operations only need to bubble up or down a single tree branch, so `O(log(n))` worst case swaps, `O(1)` average.
+
+Keeping a BST balanced requires tree rotations, which can change the top element for another one, and would require moving the entire array around (`O(n)`).
+
+#### Heaps can be efficiently implemented on an array
+Parent and children indexes can be computed from the current index as [shown here](http://web.archive.org/web/20180819074303/https://www.geeksforgeeks.org/array-representation-of-binary-heap/).
+
+There are no balancing operations like BST.
+
+Delete min is the most worrying operation as it has to be top down. But it can always be done by "percolating down" a single branch of the heap as [explained here](https://en.wikipedia.org/w/index.php?title=Binary_heap&oldid=849465817#Extract). This leads to an `O(log(n))` worst case, since the heap is always well balanced.
+
+If you are inserting a single node for every one you remove, then you lose the advantage of the asymptotic O(1) average insert that heaps provide as the delete would dominate, and you might as well use a BST. Dijkstra however updates nodes several times for each removal, so we are fine.
+
+#### Dynamic array heaps vs pointer tree heaps
+
+Heaps can be efficiently implemented on top of pointer heaps: [link](https://stackoverflow.com/questions/19720438/is-it-possible-to-make-efficient-pointer-based-binary-heap-implementations)
+
+The dynamic array implementation is more space efficient. Suppose that each heap element contains just a pointer to a struct:
+
+- the tree implementation must store three pointers for each element: parent, left child and right child. So the memory usage is always 4n (3 tree pointers + 1 struct pointer).
+
+Tree BSTs would also need further balancing information, e.g. black-red-ness.
+
+- the dynamic array implementation can be of size 2n just after a doubling. So on average it is going to be 1.5n.
+
+On the other hand, the tree heap has better worst case insert, because copying the backing dynamic array to double its size takes O(n) worst case, while the tree heap just does new small allocations for each node.
+
+Still, the backing array doubling is O(1) amortized, so it comes down to a maximum latency consideration. [Mentioned here](https://stackoverflow.com/questions/19720438/is-it-possible-to-make-efficient-pointer-based-binary-heap-implementations/41338070#41338070).
+
+### Philosophy
+
+- BSTs maintain a global property between a parent and all descendants (left smaller, right bigger).
+The top node of a BST is the middle element, which requires global knowledge to maintain (knowing how many smaller and larger elements are there).
+This global property is more expensive to maintain (log n insert), but gives more powerful searches (log n search).
+
+- Heaps maintain a local property between parent and direct children (parent > children).
+The top note of a heap is the big element, which only requires local knowledge to maintain (knowing your parent).
+
+Comparing BST vs Heap vs Hashmap:
+
+- BST: can either be either a reasonable:
+	- unordered set (a structure that determines if an element was previously inserted or not). But hashmap tends to be better due to O(1) amortized insert.
+	- sorting machine. But heap is generally better at that, which is why heapsort is much more widely known than tree sort
+
+- heap: is just a sorting machine. Cannot be an efficient unordered set, because you can only check for the smallest/largest element fast.
+
+- hash map: can only be an unordered set, not an efficient sorting machine, because the hashing mixes up any ordering.
+
+#### Doubly-linked list
+A doubly linked list can be seen as subset of the heap where first item has greatest priority, so let's compare them here as well:
+
+- insertion:
+	- position:
+		- doubly linked list: the inserted item must be either the first or last, as we only have pointers to those elements.
+		- binary heap: the inserted item can end up in any position. Less restrictive than linked list.
+
+	- time:
+		- doubly linked list: O(1) worst case since we have pointers to the items, and the update is really simple
+		- binary heap: O(1) average, thus worse than linked list. Tradeoff for having more general insertion position.
+
+- search: O(n) for both
+
+An use case for this is when the key of the heap is the current timestamp: in that case, new entries will always go to the beginning of the list. So we can even forget the exact timestamp altogether, and just keep the position in the list as the priority.
+
+This can be used to implement an [LRU cache](https://stackoverflow.com/questions/23772102/lru-cache-in-java-with-generics-and-o1-operations/34206517#34206517). Just like for [heap applications like Dijkstra](https://stackoverflow.com/questions/14252582/how-can-i-use-binary-heap-in-the-dijkstra-algorithm), you will want to keep an additional hashmap from the key to the corresponding node of the list, to find which node to update quickly.
+
+
+Notes Resource links: 
+https://cs.stackexchange.com/questions/27860/whats-the-difference-between-a-binary-search-tree-and-a-binary-heap
+
