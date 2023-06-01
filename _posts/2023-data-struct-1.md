@@ -1,11 +1,12 @@
 ### std::map VS. std::unordered_map
-Different libraries may have different implementations. Let's only focus on stdlibc++ source here (also apply to the following discussion)
 
-std::map uses Red-black tree (a special case of binary tree with one more bit representing red or black. The extra bit is used to rearrange the tree into more balanced tree.) as the underlying implementation. The use of binary tree makes sense, since std::set can be traversed in order, which would not be efficient if a hash map were used.
+Different libraries may employ diverse strategies in their implementations. In this discussion, we will narrow our focus to the source of stdlibc++.
 
-std::unordered_map uses hash table (hash table + linked lisk for each bucket) as the underlying implementation. The use of hash table makes sense, since std::unordered_map cannot be traversed in order, so the standard library chose hash map instead of Red-black tree, since hash map has a better amortized insert time complexity.
+The std::map, as part of its underlying implementation, utilizes a Red-black tree. This is a specific type of binary tree characterized by an additional bit signifying 'red' or 'black.' The purpose of this extra bit is to rearrange the tree to achieve better balance. Employing a binary tree is a logical choice considering a std::map can be traversed in order - an operation that would be less efficient if performed with a hash map.
 
-If the inserted data is required to be sorted or not leads to decision using map or unordered_map.
+On the other hand, std::unordered_map employs a hash table (which includes a linked list for each bucket) in its underlying implementation. The rationale for using a hash table is that a std::unordered_map does not offer the capability to traverse in order. Therefore, the standard library opts for a hash map instead of a Red-black tree, as the former provides superior amortized time complexity for insert operations.
+
+The decision to use either map or unordered_map is largely determined by whether the data being inserted needs to be sorted.
 
 ```
                       map            unordered_map
@@ -16,13 +17,22 @@ Delete               log(n)              1
 ```
 ### std::set VS. std::unordered_set
 
-std::set uses Red-black tree (a special case of binary tree with one more bit representing red or black. The extra bit is used to rearrange the tree into more balanced tree.) as the underlying implementation.
-std::unordered_set uses hash table (hash table + linked lisk for each bucket) as the underlying implementation.
+The std::set, as part of its underlying implementation, utilizes a Red-black tree. Employing a binary tree such as Red-black tree is a logical choice considering a std::set can be traversed in order - an operation that would be less efficient if performed with a hash map.
 
+On the other hand, std::unordered_set employs a hash table (which includes a linked list for each bucket) in its underlying implementation. The rationale for using a hash table is that a std::unordered_set does not offer the capability to traverse in order. Therefore, the standard library opts for a hash map instead of a Red-black tree, as the former provides superior amortized time complexity for insert operations.
 
+The decision to use either set or unordered_set is largely determined by whether the data being inserted needs to be sorted.
 
-
+```
+                      set            unordered_set
+Insert               log(n)              1
+Find any             log(n)              1    
+Find max/min           1                 n (checking if a bucket is empty for all slots in the hash table also may give you a big constant)
+Delete               log(n)              1
+```
 ### set (unordered_set) VS. map (unordered_map)
+
+Set(unordered_set) and map (unordered_map) are extremely similar. They are designed and separated for different using niche. The map stores pairs of (key, value), wile set stores only keys.
 
 
 ### Heap VS. Binary Tree
